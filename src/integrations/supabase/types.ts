@@ -214,6 +214,51 @@ export type Database = {
         }
         Relationships: []
       }
+      application_attachments: {
+        Row: {
+          application_id: string
+          created_at: string
+          file_hash: string | null
+          file_path: string
+          id: string
+          note: string | null
+          order_index: number
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          file_hash?: string | null
+          file_path: string
+          id?: string
+          note?: string | null
+          order_index?: number
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          file_hash?: string | null
+          file_path?: string
+          id?: string
+          note?: string | null
+          order_index?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_attachments_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "application_attachments_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "submission_summary"
+            referencedColumns: ["application_id"]
+          },
+        ]
+      }
       application_reviews: {
         Row: {
           action: Database["public"]["Enums"]["review_action"]
@@ -277,6 +322,7 @@ export type Database = {
       }
       applications: {
         Row: {
+          achievement_name: string | null
           ai_blank_fields: string | null
           ai_check_authenticity: boolean | null
           ai_check_completeness: boolean | null
@@ -310,6 +356,7 @@ export type Database = {
           aigc_status: string
           certificate_issued_at: string | null
           certificate_no: string | null
+          claimed_credit: number | null
           college_id: string | null
           created_at: string
           custom_keywords: string[]
@@ -323,17 +370,23 @@ export type Database = {
           final_credit: number | null
           final_review_note: string | null
           final_reviewer_id: string | null
+          form_file_path: string | null
           id: string
+          item_category: string | null
+          item_project: string | null
           keywords_fingerprint: string | null
+          level_name: string | null
           review_source: string | null
           reviewed_at: string | null
           selected_keywords: string[]
+          self_rank: string | null
           status: Database["public"]["Enums"]["application_status"]
           student_id: string
           submitted_at: string
           updated_at: string
         }
         Insert: {
+          achievement_name?: string | null
           ai_blank_fields?: string | null
           ai_check_authenticity?: boolean | null
           ai_check_completeness?: boolean | null
@@ -367,6 +420,7 @@ export type Database = {
           aigc_status?: string
           certificate_issued_at?: string | null
           certificate_no?: string | null
+          claimed_credit?: number | null
           college_id?: string | null
           created_at?: string
           custom_keywords?: string[]
@@ -380,17 +434,23 @@ export type Database = {
           final_credit?: number | null
           final_review_note?: string | null
           final_reviewer_id?: string | null
+          form_file_path?: string | null
           id?: string
+          item_category?: string | null
+          item_project?: string | null
           keywords_fingerprint?: string | null
+          level_name?: string | null
           review_source?: string | null
           reviewed_at?: string | null
           selected_keywords?: string[]
+          self_rank?: string | null
           status?: Database["public"]["Enums"]["application_status"]
           student_id: string
           submitted_at?: string
           updated_at?: string
         }
         Update: {
+          achievement_name?: string | null
           ai_blank_fields?: string | null
           ai_check_authenticity?: boolean | null
           ai_check_completeness?: boolean | null
@@ -424,6 +484,7 @@ export type Database = {
           aigc_status?: string
           certificate_issued_at?: string | null
           certificate_no?: string | null
+          claimed_credit?: number | null
           college_id?: string | null
           created_at?: string
           custom_keywords?: string[]
@@ -437,11 +498,16 @@ export type Database = {
           final_credit?: number | null
           final_review_note?: string | null
           final_reviewer_id?: string | null
+          form_file_path?: string | null
           id?: string
+          item_category?: string | null
+          item_project?: string | null
           keywords_fingerprint?: string | null
+          level_name?: string | null
           review_source?: string | null
           reviewed_at?: string | null
           selected_keywords?: string[]
+          self_rank?: string | null
           status?: Database["public"]["Enums"]["application_status"]
           student_id?: string
           submitted_at?: string
