@@ -16,7 +16,7 @@ import { Download, Upload, FileSpreadsheet, ImagePlus, Trash2, AlertTriangle, Lo
 import { toast } from "sonner";
 import { toastError } from "@/lib/errors";
 import { sha256Hex as sha256OfFile } from "@/lib/fileHash";
-import { newUuid } from "@/lib/uuid";
+import { randomUUID as newUuid } from "@/lib/uuid";
 import { parseApplicationForm, serializeItems, type FormItem } from "@/lib/parseForm";
 import { lookupStandardCredit, checkCreditCompliance, COMPLIANCE_LABEL } from "@/lib/creditStandard";
 import { buildAchievementFingerprint } from "@/lib/keywordFingerprint";

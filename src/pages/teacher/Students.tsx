@@ -209,7 +209,7 @@ const Students = () => {
                             <span className="text-sm">
                               <span className="font-semibold">{c.toFixed(1)}</span>
                               <span className={`ml-1.5 rounded px-1.5 py-0.5 text-xs font-medium ${c >= 4 ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>
-                                {gradeOf(c)}
+                                {gradeOf(c).label}
                               </span>
                             </span>
                           );

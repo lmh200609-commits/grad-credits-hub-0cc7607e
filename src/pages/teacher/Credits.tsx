@@ -132,7 +132,7 @@ const Credits = () => {
     const data = filtered.map((r) => [
       r.rank, r.full_name ?? "", r.student_no ?? "", r.department ?? "",
       r.major ?? "", r.class_name ?? "", r.approved_count, Number(r.total_credit.toFixed(1)),
-      gradeOf(r.total_credit),
+      gradeOf(r.total_credit).label,
       r.total_credit >= PASS_THRESHOLD ? "合格" : "不合格",
     ]);
     const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
