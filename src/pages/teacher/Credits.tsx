@@ -18,6 +18,7 @@ import {
 import { Download, Trophy, Users, CheckCircle2, AlertTriangle, ChevronDown } from "lucide-react";
 import TablePagination from "@/components/TablePagination";
 import * as XLSX from "xlsx";
+import { gradeOf } from "@/lib/creditStandard";
 
 const PAGE_SIZE = 50;
 
@@ -127,14 +128,15 @@ const Credits = () => {
   const maxCredit = useMemo(() => rows.reduce((m, r) => Math.max(m, r.total_credit), 0), [rows]);
 
   const exportXlsx = () => {
-    const header = ["排名", "姓名", "学号", "院系", "专业", "班级", "通过申请数", "累计学分", "是否合格"];
+    const header = ["排名", "姓名", "学号", "院系", "专业", "班级", "通过申请数", "累计学分", "成绩等级", "是否合格"];
     const data = filtered.map((r) => [
       r.rank, r.full_name ?? "", r.student_no ?? "", r.department ?? "",
       r.major ?? "", r.class_name ?? "", r.approved_count, Number(r.total_credit.toFixed(1)),
+      gradeOf(r.total_credit).label,
       r.total_credit >= PASS_THRESHOLD ? "合格" : "不合格",
     ]);
     const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
-    ws["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
+    ws["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "学分排名");
     const tag = passFilter === "pass" ? "合格" : passFilter === "fail" ? "不合格" : "全部";
@@ -244,13 +246,14 @@ const Credits = () => {
                   <TableHead>班级</TableHead>
                   <TableHead className="text-right">通过申请</TableHead>
                   <TableHead className="text-right">累计学分</TableHead>
+                  <TableHead className="text-center">成绩等级</TableHead>
                   <TableHead className="text-center">是否合格</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground">暂无数据</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground">暂无数据</TableCell></TableRow>
                 ) : paged.map((r) => {
                   const passed = r.total_credit >= PASS_THRESHOLD;
                   return (
@@ -263,6 +266,11 @@ const Credits = () => {
                     <TableCell>{r.class_name ?? "—"}</TableCell>
                     <TableCell className="text-right">{r.approved_count}</TableCell>
                     <TableCell className={`text-right font-semibold ${passed ? "text-success" : "text-danger"}`}>{r.total_credit.toFixed(1)}</TableCell>
+                    <TableCell className="text-center">
+                      <span className="rounded px-2 py-0.5 text-xs font-medium bg-muted text-foreground">
+                        {gradeOf(r.total_credit).label}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-center">
                       <span className={`rounded px-2 py-0.5 text-xs font-medium ${passed ? "bg-success/15 text-success" : "bg-danger/15 text-danger"}`}>
                         {passed ? "合格" : "不合格"}

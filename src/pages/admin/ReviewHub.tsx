@@ -36,6 +36,10 @@ type Row = {
   description: string;
   status: string;
   ai_suggested_credit: number | null;
+  claimed_credit?: number | null;
+  achievement_name?: string | null;
+  level_name?: string | null;
+
   ai_confidence: number | null;
   final_credit: number | null;
   submitted_at: string;
@@ -133,7 +137,7 @@ const ReviewHub = () => {
     }
     let q = supabase
       .from("applications")
-      .select("id, description, status, ai_suggested_credit, ai_confidence, final_credit, submitted_at, student_id, review_source", { count: "exact" })
+      .select("id, description, status, ai_suggested_credit, ai_confidence, final_credit, claimed_credit, achievement_name, level_name, submitted_at, student_id, review_source", { count: "exact" })
       .order("submitted_at", { ascending: false });
     if (FILTERS[tab].length) q = q.in("status", FILTERS[tab] as never);
     if (sourceFilter !== "all" && tab === "pending_review") q = q.eq("review_source", sourceFilter);
@@ -309,7 +313,7 @@ const ReviewHub = () => {
                 </TableHead>
                 <TableHead>学生</TableHead>
                 <TableHead>说明</TableHead>
-                <TableHead>建议学分</TableHead>
+                <TableHead>自报/认定学分</TableHead>
                 <TableHead>判定确信度</TableHead>
                 <TableHead>状态</TableHead>
                 <TableHead>提交时间</TableHead>
@@ -333,8 +337,12 @@ const ReviewHub = () => {
                           />
                         </TableCell>
                         <TableCell>{p?.full_name ?? "—"} <span className="text-xs text-muted-foreground">{p?.student_no}</span></TableCell>
-                        <TableCell className="max-w-xs truncate">{r.description}</TableCell>
-                        <TableCell>{rejectedDisplay ? 0 : (r.final_credit ?? r.ai_suggested_credit ?? "—")}</TableCell>
+                        <TableCell className="max-w-xs truncate">
+                          {r.achievement_name
+                            ? `${r.achievement_name}${r.level_name ? `（${r.level_name}）` : ""}`
+                            : r.description}
+                        </TableCell>
+                        <TableCell>{rejectedDisplay ? 0 : (r.final_credit ?? r.claimed_credit ?? r.ai_suggested_credit ?? "—")}</TableCell>
                         <TableCell>
                           <ConfidenceBadge status={r.status} confidence={r.ai_confidence} reviewSource={r.review_source} />
                         </TableCell>

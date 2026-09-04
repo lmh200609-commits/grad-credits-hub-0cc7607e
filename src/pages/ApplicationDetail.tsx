@@ -29,6 +29,9 @@ import { createPortal } from "react-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { toastErrorLegacy } from "@/lib/errors";
+import AttachmentsGallery from "@/components/AttachmentsGallery";
+import { deserializeItems } from "@/lib/parseForm";
+import { COMPLIANCE_LABEL } from "@/lib/creditStandard";
 
 // 把后端/Supabase 的英文错误信息翻译成简体中文，避免 RLS / JWT 等英文消息直接弹给用户
 function friendlyError(err: any): string {
@@ -84,6 +87,15 @@ type App = {
   aigc_score?: number | null;
   aigc_detail?: any;
   aigc_checked_at?: string | null;
+  item_category?: string | null;
+  item_project?: string | null;
+  achievement_name?: string | null;
+  level_name?: string | null;
+  self_rank?: string | null;
+  claimed_credit?: number | null;
+  form_file_path?: string | null;
+  credit_standard?: number | null;
+  credit_compliance?: "ok" | "over" | "under" | "unknown" | null;
 };
 type Review = {
   id: string; action: string; decision: string; credit: number | null;
@@ -120,6 +132,7 @@ const ApplicationDetail = () => {
   const [orientation, setOrientation] = useState<"landscape" | "portrait">("landscape");
   const [preparing, setPreparing] = useState(false);
   const [materialPreviewOpen, setMaterialPreviewOpen] = useState(false);
+  const formItems = app ? deserializeItems(app.description) : [];
   const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async () => {
@@ -127,7 +140,7 @@ const ApplicationDetail = () => {
     const { data: a } = await supabase.from("applications").select("*").eq("id", id).single();
     if (!a) return;
     setApp(a as App);
-    setCredit(Number((a as App).ai_suggested_credit ?? (a as App).final_credit ?? 0));
+    setCredit(Number((a as App).final_credit ?? (a as App).claimed_credit ?? (a as App).ai_suggested_credit ?? 0));
     const [s, r, rv] = await Promise.all([
       supabase
         .from("profiles")
@@ -635,40 +648,73 @@ const ApplicationDetail = () => {
                 </div>
               </div>
             )}
-            {app.file_path && (
+              {/* 填表流程：申请表条目 + 学分合规 */}
+              {formItems.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-muted-foreground flex items-center gap-1">
+                    <ImageIcon className="h-3.5 w-3.5" /> 申请表条目（{formItems.length} 条）
+                  </div>
+                  <div className="space-y-1.5">
+                    {formItems.map((it, idx) => (
+                      <div key={idx} className="rounded border bg-muted/30 p-2 text-xs">
+                        <div className="font-medium">
+                          {idx + 1}. {it.achievement || EMPTY_PLACEHOLDER}
+                          {it.level ? `（${it.level}）` : ""}
+                        </div>
+                        <div className="mt-0.5 text-muted-foreground">
+                          {it.category || EMPTY_PLACEHOLDER} / {it.project || EMPTY_PLACEHOLDER}
+                          {it.rank ? ` · ${it.rank}` : ""}
+                          {it.credit != null ? ` · 自报 ${it.credit} 分` : ""}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    {app.claimed_credit != null && (
+                      <Badge variant="secondary">自报合计 {app.claimed_credit} 分</Badge>
+                    )}
+                    {app.credit_standard != null && (
+                      <Badge variant="outline">标准合计 {app.credit_standard} 分</Badge>
+                    )}
+                    {app.credit_compliance && app.credit_compliance !== "ok" && (
+                      <Badge variant="destructive">{COMPLIANCE_LABEL[app.credit_compliance]}</Badge>
+                    )}
+                    {app.credit_compliance === "ok" && (
+                      <Badge variant="outline">学分合规</Badge>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 佐证材料画廊（多图）或旧版单图 */}
               <div className="space-y-2">
                 <div className="text-muted-foreground flex items-center gap-1">
                   <ImageIcon className="h-3.5 w-3.5" /> 提交材料
                 </div>
-                {fileUrl ? (
-                  /\.(jpe?g|png|webp|gif)$/i.test(app.file_path) ? (
-                    <button
-                      type="button"
-                      onClick={() => setMaterialPreviewOpen(true)}
-                      className="group relative block w-full text-left"
-                      title="点击放大查看"
-                    >
-                      <img
-                        src={fileUrl}
-                        alt="学生提交的材料"
-                        loading="eager"
-                        decoding="sync"
-                        className="max-h-96 w-auto rounded border bg-muted/30 object-contain"
-                      />
-                      <span className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground">
-                        <ZoomIn className="h-3.5 w-3.5" /> 点击放大查看
-                      </span>
-                    </button>
-                  ) : (
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={fileUrl} target="_blank" rel="noreferrer"><FileDown className="mr-1 h-4 w-4" /> 查看附件</a>
-                    </Button>
-                  )
-                ) : (
-                  <p className="text-xs text-muted-foreground">附件加载中或无访问权限…</p>
-                )}
+                <AttachmentsGallery applicationId={app.id} fallbackPath={app.file_path} />
               </div>
-            )}
+
+              {/* 申请表原表下载 */}
+              {app.form_file_path && (
+                <div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      const { data, error } = await supabase.storage
+                        .from("application-files")
+                        .createSignedUrl(app.form_file_path!, 600);
+                      if (error || !data?.signedUrl) {
+                        toast({ title: "下载失败", description: "无法获取申请表文件", variant: "destructive" });
+                        return;
+                      }
+                      window.open(data.signedUrl, "_blank");
+                    }}
+                  >
+                    <FileDown className="mr-1 h-4 w-4" /> 下载申请表
+                  </Button>
+                </div>
+              )}
           </CardContent>
         </Card>
 
