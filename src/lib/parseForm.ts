@@ -13,7 +13,7 @@ export type FormItem = {
 };
 
 export type ParseResult =
-  | { ok: true; items: FormItem[]; studentName: string | null; studentNo: string | null; totalCredit: number | null }
+  | { ok: true; error?: null; items: FormItem[]; studentName: string | null; studentNo: string | null; totalCredit: number | null }
   | { ok: false; error: string };
 
 const SECTION_RE = /^[一二三四五六七八九十]+[、.．]\s*(.+)$/;
