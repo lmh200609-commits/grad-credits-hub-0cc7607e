@@ -219,28 +219,34 @@ export type Database = {
           application_id: string
           created_at: string
           file_hash: string | null
+          file_name: string | null
           file_path: string
           id: string
           note: string | null
           order_index: number
+          sort_order: number
         }
         Insert: {
           application_id: string
           created_at?: string
           file_hash?: string | null
+          file_name?: string | null
           file_path: string
           id?: string
           note?: string | null
           order_index?: number
+          sort_order?: number
         }
         Update: {
           application_id?: string
           created_at?: string
           file_hash?: string | null
+          file_name?: string | null
           file_path?: string
           id?: string
           note?: string | null
           order_index?: number
+          sort_order?: number
         }
         Relationships: [
           {
