@@ -268,7 +268,7 @@ const Credits = () => {
                     <TableCell className={`text-right font-semibold ${passed ? "text-success" : "text-danger"}`}>{r.total_credit.toFixed(1)}</TableCell>
                     <TableCell className="text-center">
                       <span className="rounded px-2 py-0.5 text-xs font-medium bg-muted text-foreground">
-                        {gradeOf(r.total_credit)}
+                        {gradeOf(r.total_credit).label}
                       </span>
                     </TableCell>
                     <TableCell className="text-center">
