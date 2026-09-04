@@ -39,7 +39,7 @@
 1. **数据库迁移（只加列 + 一张附件表）**：
    - `applications` 增列：`item_category`、`item_project`、`achievement_name`、`level_name`、`self_rank`、`claimed_credit`、`form_file_path`
    - 新建 `application_attachments`（application_id、file_path、file_hash、order_index、note），支持一条申请多张佐证；含 GRANT + RLS（学生只读写自己的，教师/管理员按学院读）
-2. **模板下载**：《学生用申请表》xlsx 放入 `public/templates/`，提交页提供下载按钮。
+2. **模板下载**：从你上传的《学生用申请表》生成一份**剔除全部「样例」行**的干净模板（用 openpyxl 处理，保留四大类结构与合并单元格样式），放入 `public/templates/申请表模板.xlsx`，提交页提供下载按钮。
 3. **Excel 解析**：前端与边缘函数均用 SheetJS（`bun add xlsx`）。
 4. **学院用统计表导出**：按《学院用统计表》格式导出本院学生（学院/专业/班级/姓名/学号/认定总学分/等级），支持按班级导出。
 
