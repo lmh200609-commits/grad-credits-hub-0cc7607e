@@ -359,6 +359,8 @@ export type Database = {
           claimed_credit: number | null
           college_id: string | null
           created_at: string
+          credit_compliance: string | null
+          credit_standard: number | null
           custom_keywords: string[]
           description: string
           face_checked_at: string | null
@@ -423,6 +425,8 @@ export type Database = {
           claimed_credit?: number | null
           college_id?: string | null
           created_at?: string
+          credit_compliance?: string | null
+          credit_standard?: number | null
           custom_keywords?: string[]
           description: string
           face_checked_at?: string | null
@@ -487,6 +491,8 @@ export type Database = {
           claimed_credit?: number | null
           college_id?: string | null
           created_at?: string
+          credit_compliance?: string | null
+          credit_standard?: number | null
           custom_keywords?: string[]
           description?: string
           face_checked_at?: string | null

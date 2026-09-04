@@ -22,11 +22,14 @@ export const applySchema = z.object({
   selected_keywords: z.array(z.string()).default([]),
   custom_keywords: z.array(z.string()).default([]),
   rule_id: z.string().optional().nullable(),
-}).refine(
-  (v) => (v.selected_keywords?.length ?? 0) + (v.custom_keywords?.length ?? 0) > 0,
-  { message: "请至少选择或填写一个关键词", path: ["selected_keywords"] },
-);
+});
 export type ApplyInput = z.infer<typeof applySchema>;
+
+// 新版填表流程：申请表解析出的条目 + 佐证图片
+export const formApplySchema = z.object({
+  itemCount: z.number().int().min(1, "申请表中未解析到有效条目"),
+  attachmentCount: z.number().int().min(1, "请至少上传 1 张佐证材料图片").max(20, "佐证图片最多 20 张"),
+});
 
 export const ruleSchema = z.object({
   name: z.string().trim().min(1, "请填写规则名称").max(100),

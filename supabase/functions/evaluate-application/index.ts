@@ -159,29 +159,54 @@ Deno.serve(async (req) => {
       ? [...relatedCases].sort((a, b) => scoreCase(b) - scoreCase(a))[0]
       : null;
 
-    // 下载附件图片
-    let imageDataUrl: string | null = null;
+    // 新版填表流程：description 为序列化条目 JSON
+    type ClaimedItem = { index: number; category: string; project: string; achievement: string; level: string; rank: string; credit: number | null };
+    let claimedItems: ClaimedItem[] = [];
+    try {
+      const parsed = JSON.parse(app.description ?? "");
+      if (parsed && Array.isArray(parsed.items)) claimedItems = parsed.items;
+    } catch { /* 旧数据：纯文本说明 */ }
+
+    // 下载附件图片（新版：application_attachments 多张，最多取 4 张；旧版回退单张 file_path）
+    const imageDataUrls: string[] = [];
     let attachmentNote = "无附件";
-    if (app.file_path) {
-      if (IMAGE_EXT.test(app.file_path)) {
-        const { data: blob, error: dlErr } = await admin.storage
-          .from("application-files")
-          .download(app.file_path);
-        if (!dlErr && blob) {
-          const buf = new Uint8Array(await blob.arrayBuffer());
-          let bin = "";
-          for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
-          const b64 = btoa(bin);
-          const ext = app.file_path.split(".").pop()!.toLowerCase();
-          const mime = ext === "jpg" ? "jpeg" : ext;
-          imageDataUrl = `data:image/${mime};base64,${b64}`;
-          attachmentNote = "已附图片";
-        } else {
-          attachmentNote = "附件下载失败";
-        }
-      } else {
-        attachmentNote = `非图片附件 (${app.file_path.split(".").pop()})，未做视觉核验`;
-      }
+    const toDataUrl = async (path: string): Promise<string | null> => {
+      const { data: blob, error: dlErr } = await admin.storage
+        .from("application-files")
+        .download(path);
+      if (dlErr || !blob) return null;
+      const buf = new Uint8Array(await blob.arrayBuffer());
+      let bin = "";
+      for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+      const ext = path.split(".").pop()!.toLowerCase();
+      const mime = ext === "jpg" ? "jpeg" : ext;
+      return `data:image/${mime};base64,${btoa(bin)}`;
+    };
+
+    let attachPaths: string[] = [];
+    if (claimedItems.length) {
+      const { data: atts } = await admin
+        .from("application_attachments")
+        .select("file_path")
+        .eq("application_id", application_id)
+        .order("sort_order", { ascending: true })
+        .limit(4);
+      attachPaths = (atts ?? []).map((a) => a.file_path).filter((p) => IMAGE_EXT.test(p));
+    }
+    if (attachPaths.length === 0 && app.file_path && IMAGE_EXT.test(app.file_path)) {
+      attachPaths = [app.file_path];
+    }
+    for (const p of attachPaths) {
+      const d = await toDataUrl(p);
+      if (d) imageDataUrls.push(d);
+    }
+    const imageDataUrl = imageDataUrls[0] ?? null; // 供既有兜底逻辑判断
+    if (imageDataUrls.length) {
+      attachmentNote = `已附佐证图片 ${imageDataUrls.length} 张`;
+    } else if (app.file_path && !IMAGE_EXT.test(app.file_path)) {
+      attachmentNote = `非图片附件 (${app.file_path.split(".").pop()})，未做视觉核验`;
+    } else if (app.file_path) {
+      attachmentNote = "附件下载失败";
     }
 
     const systemPrompt = `你是大学学分材料核验助手。
@@ -244,7 +269,15 @@ reasoning_short：一句话（≤60 字）给学生看，只点出"是否通过 
 
 【工具使用】可主动调用 web_search 工具（最多 2 次）辅助 D 项判断；完成全部核验后必须调用 submit_evaluation 提交结果。`;
 
-    const fullSystemPrompt = systemPrompt + extraPrompt;
+    const fullSystemPrompt = systemPrompt + extraPrompt + (claimedItems.length ? `
+
+【填表申请专项核验 — 本申请为学生填表提交，必须严格执行】
+- application.claimed_items 是学生在《创新实践学分认定申请表》中逐条填报的条目（含大类/认定项目/成果名称/级别/本人排名/自报学分），后面的每张图片均为佐证材料。
+- 逐条比对：佐证图片上的成果名称、级别、姓名、排名是否与填报条目相符；任何一条找不到对应佐证或关键信息不符 → consistency_ok = false，并在 reasoning 中写明是第几条、差在哪。
+- 姓名/学号等身份信息以佐证图片为准与 student_profile 比对（identity 规则同上）。
+- 学分合规：以图片中识别到的真实级别与排名对照《长春财经学院创新实践学分认定办法》标准，判断学生自报学分（claimed_credit_total，参考标准 credit_standard_total）是否超标；超标或偏低都必须在 credit_compliance_note 中用中文写明，如「第 2 条自报 8 分，按国家级 B 类一等奖团队负责人标准应为 6 分」。无法判断填「待人工核定」。
+- reasoning 结构改为：「逐条核验：第 1 条…；第 2 条…；身份核验：…；学分合规：…；结论：…」。
+- 系统不替你给学分建议；你的职责是核验真伪与信息相符性。` : "");
 
     const userPayload = {
       student: {
@@ -255,12 +288,20 @@ reasoning_short：一句话（≤60 字）给学生看，只点出"是否通过 
         id_card_masked: maskIdCard(studentProfile?.id_card) ?? "未提供",
         default_school: DEFAULT_SCHOOL,
       },
-      application: {
-        description: app.description,
-        selected_keywords: selected,
-        custom_keywords: custom,
-        attachment: attachmentNote,
-      },
+      application: claimedItems.length
+        ? {
+            claimed_items: claimedItems,
+            claimed_credit_total: app.claimed_credit ?? null,
+            credit_standard_total: app.credit_standard ?? null,
+            credit_compliance: app.credit_compliance ?? null,
+            attachment: attachmentNote,
+          }
+        : {
+            description: app.description,
+            selected_keywords: selected,
+            custom_keywords: custom,
+            attachment: attachmentNote,
+          },
       candidate_case: candidateCase
         ? { title: candidateCase.title, awarded_credit: candidateCase.awarded_credit }
         : null,
@@ -272,8 +313,8 @@ reasoning_short：一句话（≤60 字）给学生看，只点出"是否通过 
     };
 
     const userContent: unknown[] = [{ type: "text", text: JSON.stringify(userPayload) }];
-    if (imageDataUrl) {
-      userContent.push({ type: "image_url", image_url: { url: imageDataUrl } });
+    for (const u of imageDataUrls) {
+      userContent.push({ type: "image_url", image_url: { url: u } });
     }
 
     const tools = [
@@ -313,6 +354,7 @@ reasoning_short：一句话（≤60 字）给学生看，只点出"是否通过 
               detected_identity: { type: ["string", "null"] },
               detected_student_no: { type: ["string", "null"] },
               detected_school: { type: ["string", "null"] },
+              credit_compliance_note: { type: ["string", "null"], description: "填表申请：自报学分与认定标准比对说明；无法判断填「待人工核定」" },
               confidence: { type: "number" },
               recommendation: { type: "string", enum: ["approve", "review", "reject"] },
               reasoning: { type: "string" },
@@ -543,6 +585,12 @@ reasoning_short：一句话（≤60 字）给学生看，只点出"是否通过 
       result.reasoning = (result.reasoning ?? "") + tag;
     }
 
+    // 填表申请：把学分合规比对说明附加到 reasoning
+    const complianceNote = (result.credit_compliance_note ?? "").toString().trim();
+    if (claimedItems.length && complianceNote && complianceNote !== "待人工核定") {
+      result.reasoning = (result.reasoning ?? "") + `\n\n【学分合规比对】${complianceNote}`;
+    }
+
     let nextStatus: string;
     let intendedAutoApprove = false;
     if (detectedMismatch) {
@@ -566,7 +614,10 @@ reasoning_short：一句话（≤60 字）给学生看，只点出"是否通过 
 
     // 不再指向 rules 表；ai_matched_rule_id 写 null
     const matchedRuleId: string | null = null;
-    const suggestedCredit = effectiveCase?.awarded_credit ?? null;
+    // 填表申请以学生自报学分（合规时）为准；旧流程沿用案例学分
+    const suggestedCredit = claimedItems.length
+      ? (app.claimed_credit ?? null)
+      : (effectiveCase?.awarded_credit ?? null);
 
     await admin.from("application_reviews").insert({
       application_id,

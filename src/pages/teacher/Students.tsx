@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 import BulkUserDialog from "@/components/BulkUserDialog";
 import { toastError } from "@/lib/errors";
+import { gradeOf } from "@/lib/creditStandard";
 
 const PAGE_SIZE = 50;
 
@@ -43,6 +44,7 @@ const Students = () => {
   const { collegeId, isSuperAdmin } = useAuth();
   const [rows, setRows] = useState<Profile[]>([]);
   const [studentIds, setStudentIds] = useState<Set<string>>(new Set());
+  const [creditMap, setCreditMap] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [major, setMajor] = useState<string>(ALL);
@@ -54,12 +56,20 @@ const Students = () => {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [roleRows, profileRows] = await Promise.all([
+    const [roleRows, profileRows, creditRows] = await Promise.all([
       fetchAll<{ user_id: string }>(supabase.from("user_roles").select("user_id").eq("role", "student")),
       fetchAll<Profile>(supabase.from("profiles").select("user_id, full_name, student_no, department, major, class_name, phone")),
+      fetchAll<{ student_id: string; final_credit: number | null; ai_suggested_credit: number | null }>(
+        supabase.from("applications").select("student_id, final_credit, ai_suggested_credit").in("status", ["approved", "auto_approved"]),
+      ),
     ]);
     const ids = new Set(roleRows.map((r) => r.user_id));
     setStudentIds(ids);
+    const cm = new Map<string, number>();
+    for (const a of creditRows) {
+      cm.set(a.student_id, (cm.get(a.student_id) ?? 0) + Number(a.final_credit ?? a.ai_suggested_credit ?? 0));
+    }
+    setCreditMap(cm);
     if (ids.size === 0) {
       console.warn("[Students] user_roles returned 0 rows — falling back to all visible profiles");
       setRows(profileRows);
@@ -170,18 +180,19 @@ const Students = () => {
                   <TableHead>专业</TableHead>
                   <TableHead>班级</TableHead>
                   <TableHead>手机号</TableHead>
+                  <TableHead className="text-center">累计学分 / 等级</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <>{Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>{Array.from({ length: 7 }).map((_, c) => (
+                    <TableRow key={i}>{Array.from({ length: 8 }).map((_, c) => (
                       <TableCell key={c}><div className="h-4 animate-pulse rounded bg-muted" /></TableCell>
                     ))}</TableRow>
                   ))}</>
                 ) : filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">暂无符合条件的学生</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">暂无符合条件的学生</TableCell></TableRow>
                 ) : (
                   paged.map((r) => (
                     <TableRow key={r.user_id}>
@@ -191,6 +202,19 @@ const Students = () => {
                       <TableCell>{r.major ?? "—"}</TableCell>
                       <TableCell>{r.class_name ?? "—"}</TableCell>
                       <TableCell className="text-muted-foreground">{r.phone ?? "—"}</TableCell>
+                      <TableCell className="text-center">
+                        {(() => {
+                          const c = creditMap.get(r.user_id) ?? 0;
+                          return (
+                            <span className="text-sm">
+                              <span className="font-semibold">{c.toFixed(1)}</span>
+                              <span className={`ml-1.5 rounded px-1.5 py-0.5 text-xs font-medium ${c >= 4 ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"}`}>
+                                {gradeOf(c)}
+                              </span>
+                            </span>
+                          );
+                        })()}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button asChild variant="outline" size="sm">
