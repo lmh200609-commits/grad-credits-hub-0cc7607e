@@ -15,7 +15,7 @@ import {
 import { Download, Upload, FileSpreadsheet, ImagePlus, Trash2, AlertTriangle, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { toastError } from "@/lib/errors";
-import { sha256OfFile } from "@/lib/fileHash";
+import { sha256Hex as sha256OfFile } from "@/lib/fileHash";
 import { newUuid } from "@/lib/uuid";
 import { parseApplicationForm, serializeItems, type FormItem } from "@/lib/parseForm";
 import { lookupStandardCredit, checkCreditCompliance, COMPLIANCE_LABEL } from "@/lib/creditStandard";
