@@ -39,9 +39,9 @@ const Login = () => {
     if (!loading && user) navigate("/", { replace: true });
   }, [user, loading, navigate]);
 
-  const onSubmit = async (values: LoginInput) => {
+  const doSignIn = async (account: string, password: string) => {
     setSubmitting(true);
-    const { error } = await signIn(accountToEmail(values.account), values.password);
+    const { error } = await signIn(accountToEmail(account), password);
     setSubmitting(false);
     if (error) {
       toast({
@@ -53,6 +53,10 @@ const Login = () => {
     }
     toast({ title: "登录成功" });
     navigate("/", { replace: true });
+  };
+
+  const onSubmit = async (values: LoginInput) => {
+    await doSignIn(values.account, values.password);
   };
 
   return (
