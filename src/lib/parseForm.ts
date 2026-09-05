@@ -78,7 +78,10 @@ export async function parseApplicationForm(file: File | ArrayBuffer): Promise<Pa
     // 样例行：任何单元格含"样例"直接跳过
     if (row.some((c) => c.includes("样例"))) continue;
     // 尾部说明行
-    if (/填写说明|审核人|学院公章/.test(joined)) continue;
+    if (/填写说明|审核人|学院公章|系主任|分管院长|院部审核/.test(joined)) continue;
+    // 抬头信息行（学院/专业班级/姓名/学号/成绩等级）
+    if (/(所在学院|专业班级|姓\s*名|学\s*号|认定成绩等级|申请表)/.test(joined)) continue;
+
 
     const [, project, achievement, level, rank, creditRaw] = row;
     if (isBlankRow(row)) continue;
