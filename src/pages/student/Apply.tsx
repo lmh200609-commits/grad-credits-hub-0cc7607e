@@ -450,7 +450,7 @@ export default function Apply() {
         <Card>
           <CardContent className="flex items-center justify-between gap-3 pt-6">
             <div className="text-sm text-muted-foreground">
-              提交后系统自动核验：材料真伪、身份一致性、是否 P 图 / AI 生成、学分是否符合标准。
+              提交后由教师审核，最终认定学分以教师审核结果为准。
             </div>
             <Button onClick={submit} disabled={!canSubmit}>
               {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
