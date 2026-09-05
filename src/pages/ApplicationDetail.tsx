@@ -689,35 +689,22 @@ const ApplicationDetail = () => {
                 </div>
               )}
 
+              {/* 学生提交的原申请表：页面内直接展示 + 下载 */}
+              {app.form_file_path && (
+                <FormFilePreview
+                  path={app.form_file_path}
+                  downloadName={`${profile?.full_name || "学生"}-创新实践学分认定申请表.xlsx`}
+                />
+              )}
+
               {/* 佐证材料画廊（多图）或旧版单图 */}
               <div className="space-y-2">
                 <div className="text-muted-foreground flex items-center gap-1">
-                  <ImageIcon className="h-3.5 w-3.5" /> 提交材料
+                  <ImageIcon className="h-3.5 w-3.5" /> 佐证材料
                 </div>
                 <AttachmentsGallery applicationId={app.id} fallbackPath={app.file_path} />
               </div>
 
-              {/* 申请表原表下载 */}
-              {app.form_file_path && (
-                <div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      const { data, error } = await supabase.storage
-                        .from("application-files")
-                        .createSignedUrl(app.form_file_path!, 600);
-                      if (error || !data?.signedUrl) {
-                        toast({ title: "下载失败", description: "无法获取申请表文件", variant: "destructive" });
-                        return;
-                      }
-                      window.open(data.signedUrl, "_blank");
-                    }}
-                  >
-                    <FileDown className="mr-1 h-4 w-4" /> 下载申请表
-                  </Button>
-                </div>
-              )}
           </CardContent>
         </Card>
 
