@@ -277,7 +277,7 @@ export default function Apply() {
   return (
     <AppLayout>
       <div className="mx-auto max-w-3xl space-y-4">
-        <PageHeader title="提交学分认定申请" description="下载模板填表 → 上传申请表与佐证材料 → 系统核验真伪" />
+        <PageHeader title="提交学分认定申请" description="下载模板填表 → 上传申请表与佐证材料 → 提交审核" />
 
         <Card>
           <CardContent className="pt-6">
@@ -286,7 +286,8 @@ export default function Apply() {
               steps={[
                 { label: "下载并填写申请表", description: "按模板逐条填写成果" },
                 { label: "上传申请表与佐证", description: "Excel + 图片" },
-                { label: "提交系统核验", description: "只验真伪，学分以教师认定为准" },
+                { label: "提交申请", description: "学分以教师认定为准" },
+
               ]}
             />
           </CardContent>

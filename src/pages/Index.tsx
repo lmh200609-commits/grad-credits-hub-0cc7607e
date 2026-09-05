@@ -134,7 +134,7 @@ const StudentWorkbench = () => {
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold">申请学分</h3>
-                <p className="mt-1 text-sm opacity-90">通过关键词匹配规则，一键提交进入审核流程。</p>
+                <p className="mt-1 text-sm opacity-90">下载模板填表，上传申请表与佐证材料即可提交。</p>
               </div>
               <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
             </div>
