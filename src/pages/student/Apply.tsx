@@ -312,15 +312,30 @@ export default function Apply() {
           <CardContent className="space-y-3">
             <div className="text-sm text-muted-foreground space-y-1">
               <p>· 用 Excel / WPS 打开模板，按四个大类逐条填写：认定项目、成果名称、级别、本人排名、认定学分。</p>
+              <p>· 不确定怎么填，可先下载「示例表」参考，示例表仅供查看，请勿直接提交。</p>
               <p>· 「认定学分」请对照《创新实践学分认定办法》标准填写，系统会帮你校验是否超标。</p>
               <p>· 不要改动表头和「认定项目/成果名称/级别/排名/学分」列结构，否则无法识别。</p>
               <p>· 第二课堂活动（学术报告、培训等）填在「四、职业技能」大类，每 16 学时或 1 周记 1 学分。</p>
             </div>
-            <Button variant="outline" onClick={downloadTemplate} disabled={downloading}>
-              <Download className="mr-2 h-4 w-4" /> {downloading ? "正在下载…" : "下载《创新实践学分认定申请表》模板"}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={() => downloadFile("template", "/templates/申请表模板.xlsx", "创新实践学分认定申请表模板.xlsx")}
+                disabled={downloading !== null}
+              >
+                <Download className="mr-2 h-4 w-4" /> {downloading === "template" ? "正在下载…" : "下载《创新实践学分认定申请表》模板"}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => downloadFile("sample", "/templates/申请表示例.xlsx", "创新实践学分认定申请表（填写示例）.xlsx")}
+                disabled={downloading !== null}
+              >
+                <Download className="mr-2 h-4 w-4" /> {downloading === "sample" ? "正在下载…" : "下载填写示例表"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
+
 
         {/* 第二步：上传 */}
         <Card>
