@@ -291,10 +291,8 @@ export default function Apply() {
               <p>· 不要改动表头和「认定项目/成果名称/级别/排名/学分」列结构，否则无法识别。</p>
               <p>· 第二课堂活动（学术报告、培训等）填在「四、职业技能」大类，每 16 学时或 1 周记 1 学分。</p>
             </div>
-            <Button asChild variant="outline">
-              <a href="/templates/申请表模板.xlsx" download>
-                <Download className="mr-2 h-4 w-4" /> 下载《创新实践学分认定申请表》模板
-              </a>
+            <Button variant="outline" onClick={downloadTemplate} disabled={downloading}>
+              <Download className="mr-2 h-4 w-4" /> {downloading ? "正在下载…" : "下载《创新实践学分认定申请表》模板"}
             </Button>
           </CardContent>
         </Card>
