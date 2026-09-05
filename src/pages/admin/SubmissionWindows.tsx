@@ -16,9 +16,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toast } from "sonner";
-import { Plus, FileSpreadsheet, RefreshCw, Trash2, FileText, Pencil } from "lucide-react";
+import { Plus, FileSpreadsheet, RefreshCw, Trash2, FileText, Pencil, Download } from "lucide-react";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { toastError } from "@/lib/errors";
+import { buildWindowStats, exportWindowStatsXlsx } from "@/lib/windowStats";
 
 type Window = {
   id: string;
@@ -62,6 +63,8 @@ const SubmissionWindows = () => {
   const [editing, setEditing] = useState<Window | null>(null);
   const [form, setForm] = useState({ name: "", starts_at: "", ends_at: "", active: true });
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [exportingId, setExportingId] = useState<string | null>(null);
+  const [collegeName, setCollegeName] = useState("");
 
   useEffect(() => {
     if (isSuperAdmin) {
@@ -89,6 +92,31 @@ const SubmissionWindows = () => {
   }, [activeCollege]);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    if (!activeCollege) return;
+    supabase.from("colleges").select("name").eq("id", activeCollege).maybeSingle()
+      .then(({ data }) => setCollegeName(data?.name ?? ""));
+  }, [activeCollege]);
+
+  const exportStats = async (w: Window) => {
+    setExportingId(w.id);
+    try {
+      const rows = await buildWindowStats({
+        collegeId: w.college_id,
+        collegeName: collegeName || "本学院",
+        startsAt: w.starts_at,
+        endsAt: w.ends_at,
+      });
+      if (rows.length === 0) return toast.error("该批次暂无已通过的申请");
+      exportWindowStatsXlsx(rows, w.name, collegeName || "本学院");
+      toast.success("统计表已导出");
+    } catch (e: any) {
+      toastError(e, "导出失败");
+    } finally {
+      setExportingId(null);
+    }
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -263,6 +291,15 @@ const SubmissionWindows = () => {
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>{busyId === w.id ? "生成中…" : "生成报告"}</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button size="sm" variant="ghost" disabled={exportingId === w.id}
+                                onClick={() => exportStats(w)} aria-label="导出统计表">
+                                {exportingId === w.id ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>导出学院统计表（Excel）</TooltipContent>
                           </Tooltip>
                           {w.report_generated_at && (
                             <Tooltip>
