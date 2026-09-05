@@ -30,6 +30,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { toastErrorLegacy } from "@/lib/errors";
 import AttachmentsGallery from "@/components/AttachmentsGallery";
+import FormFilePreview from "@/components/FormFilePreview";
 import { deserializeItems } from "@/lib/parseForm";
 import { COMPLIANCE_LABEL } from "@/lib/creditStandard";
 
@@ -693,7 +694,7 @@ const ApplicationDetail = () => {
               {app.form_file_path && (
                 <FormFilePreview
                   path={app.form_file_path}
-                  downloadName={`${profile?.full_name || "学生"}-创新实践学分认定申请表.xlsx`}
+                  downloadName={`${student?.full_name || "学生"}-创新实践学分认定申请表.xlsx`}
                 />
               )}
 
