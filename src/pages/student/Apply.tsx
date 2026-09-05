@@ -266,7 +266,7 @@ export default function Apply() {
       supabase.functions.invoke("face-compare", { body: { application_id: appRow.id } })
         .catch(() => { /* ignore */ });
 
-      toast.success("提交成功，系统正在核验材料真伪");
+      toast.success("提交成功，请等待教师审核");
       navigate("/my-applications");
     } catch (e) {
       toastError(e, "提交失败");
