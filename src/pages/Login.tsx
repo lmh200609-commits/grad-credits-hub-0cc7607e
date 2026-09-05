@@ -106,6 +106,25 @@ const Login = () => {
               账号由管理员统一导入，本系统不支持自助注册
             </p>
           </form>
+          <div className="space-y-2 border-t pt-4">
+            <p className="text-center text-xs text-muted-foreground">测试账号（点击即可登录）</p>
+            <div className="grid grid-cols-2 gap-2">
+              {TEST_ACCOUNTS.map((t) => (
+                <Button
+                  key={t.account}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={submitting}
+                  onClick={() => void doSignIn(t.account, TEST_PASSWORD)}
+                  className="flex flex-col h-auto py-2"
+                >
+                  <span className="text-sm font-medium">{t.label}</span>
+                  <span className="text-xs text-muted-foreground">{t.account}</span>
+                </Button>
+              ))}
+            </div>
+          </div>
         </CardContent>
       </Card>
       </div>
