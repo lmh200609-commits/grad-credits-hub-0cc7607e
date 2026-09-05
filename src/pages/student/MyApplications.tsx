@@ -226,7 +226,7 @@ const MyApplications = () => {
                     )}
                   >
                     <TableCell className="font-medium">{getAppTitle(r)}</TableCell>
-                    <TableCell className="max-w-xs truncate">{r.description}</TableCell>
+                    <TableCell className="max-w-xs truncate">{getItemsSummary(r)}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap items-center gap-1.5">
                         <StatusBadge status={r.status} audience="student" />
