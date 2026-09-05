@@ -266,7 +266,7 @@ export default function Apply() {
       supabase.functions.invoke("face-compare", { body: { application_id: appRow.id } })
         .catch(() => { /* ignore */ });
 
-      toast.success("提交成功，系统正在核验材料真伪");
+      toast.success("提交成功，请等待教师审核");
       navigate("/my-applications");
     } catch (e) {
       toastError(e, "提交失败");
@@ -313,8 +313,8 @@ export default function Apply() {
             <div className="text-sm text-muted-foreground space-y-1">
               <p>· 用 Excel / WPS 打开模板，按四个大类逐条填写：认定项目、成果名称、级别、本人排名、认定学分。</p>
               <p>· 不确定怎么填，可先下载「示例表」参考，示例表仅供查看，请勿直接提交。</p>
-              <p>· 「认定学分」请对照《创新实践学分认定办法》标准填写，系统会帮你校验是否超标。</p>
-              <p>· 不要改动表头和「认定项目/成果名称/级别/排名/学分」列结构，否则无法识别。</p>
+              <p>· 「认定学分」请对照《创新实践学分认定办法》标准填写，教师审核时会据此核对。</p>
+              <p>· 不要改动表头和「认定项目/成果名称/级别/排名/学分」列结构，以免影响教师审核。</p>
               <p>· 第二课堂活动（学术报告、培训等）填在「四、职业技能」大类，每 16 学时或 1 周记 1 学分。</p>
             </div>
             <div className="flex flex-wrap gap-2">
