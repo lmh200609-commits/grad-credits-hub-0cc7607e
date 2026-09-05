@@ -13,6 +13,14 @@ import loginBg from "@/assets/login-bg.jpg";
 
 const accountToEmail = (account: string) => `${account}@admin.local`;
 
+const TEST_ACCOUNTS = [
+  { account: "2024001", label: "学生·白雪", role: "学生" },
+  { account: "S2024101", label: "学生·赵子轩", role: "学生" },
+  { account: "T001", label: "教师·张老师", role: "教师" },
+  { account: "A001", label: "管理员", role: "管理员" },
+] as const;
+const TEST_PASSWORD = "Test1234";
+
 const Login = () => {
   const { signIn, user, loading } = useAuth();
   const navigate = useNavigate();
