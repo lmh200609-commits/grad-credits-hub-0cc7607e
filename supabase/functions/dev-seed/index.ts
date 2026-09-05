@@ -60,35 +60,10 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Require super_admin JWT to invoke this seed/perf/cleanup endpoint
-    const authHeader = req.headers.get("Authorization") || "";
-    if (!authHeader.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const userClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-    const { data: claims, error: claimErr } = await userClient.auth.getClaims(authHeader.slice(7));
-    if (claimErr || !claims?.claims) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const callerId = claims.claims.sub as string;
-    const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", callerId).eq("role", "super_admin");
-    if (!roles || roles.length === 0) {
-      return new Response(JSON.stringify({ error: "Forbidden: super_admin only" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Parse mode
+    // Parse body first (may carry a seed secret as alternative auth)
     let mode = "default";
     let perfStudents = 2000, perfApps = 5000, perfCases = 500;
+    let bodySecret: string | null = null;
     if (req.method === "POST") {
       try {
         const body = await req.json();
@@ -96,7 +71,38 @@ Deno.serve(async (req) => {
         if (typeof body?.students === "number") perfStudents = body.students;
         if (typeof body?.applications === "number") perfApps = body.applications;
         if (typeof body?.cases === "number") perfCases = body.cases;
+        if (typeof body?.secret === "string") bodySecret = body.secret;
       } catch { /* no body */ }
+    }
+
+    // Auth: either a valid TEST_SEED_SECRET, or a super_admin JWT
+    const seedSecret = Deno.env.get("TEST_SEED_SECRET");
+    const secretOk = !!seedSecret && bodySecret === seedSecret && mode === "default";
+    if (!secretOk) {
+      const authHeader = req.headers.get("Authorization") || "";
+      if (!authHeader.startsWith("Bearer ")) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const userClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } },
+      );
+      const { data: claims, error: claimErr } = await userClient.auth.getClaims(authHeader.slice(7));
+      if (claimErr || !claims?.claims) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const callerId = claims.claims.sub as string;
+      const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", callerId).eq("role", "super_admin");
+      if (!roles || roles.length === 0) {
+        return new Response(JSON.stringify({ error: "Forbidden: super_admin only" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     if (mode === "perf") {
