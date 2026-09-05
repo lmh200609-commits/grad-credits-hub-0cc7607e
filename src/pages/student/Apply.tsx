@@ -48,6 +48,29 @@ export default function Apply() {
 
   const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  // 通过 fetch + Blob 下载模板：兼容 Lovable 预览环境（直接 <a download> 会被预览拦截）
+  const downloadTemplate = useCallback(async () => {
+    setDownloading(true);
+    try {
+      const res = await fetch("/templates/申请表模板.xlsx");
+      if (!res.ok) throw new Error(`下载失败（${res.status}）`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "创新实践学分认定申请表模板.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toastError(e, "模板下载失败");
+    } finally {
+      setDownloading(false);
+    }
+  }, []);
 
   const formInputRef = useRef<HTMLInputElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
