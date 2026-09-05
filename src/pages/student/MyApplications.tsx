@@ -14,6 +14,7 @@ import TableSkeleton from "@/components/TableSkeleton";
 import { Clock, Lock, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { deserializeItems } from "@/lib/parseForm";
 
 type Row = {
   id: string;
@@ -92,13 +93,24 @@ const MyApplications = () => {
     { filter: user ? `student_id=eq.${user.id}` : null },
   );
 
+  const getItemsSummary = (r: Row) => {
+    const items = deserializeItems(r.description);
+    if (items.length === 0) return r.description || "—";
+    return items
+      .map((it) => [it.achievement, it.level, it.credit != null ? `${it.credit} 学分` : null].filter(Boolean).join(" · "))
+      .join("；");
+  };
+
   const getAppTitle = (r: Row) => {
+    const items = deserializeItems(r.description);
+    if (items.length > 0) return items.map((it) => it.achievement).filter(Boolean).slice(0, 2).join(" · ") || "—";
     const c = (r.custom_keywords ?? []).filter(Boolean);
     if (c.length > 0) return c.slice(0, 2).join(" · ");
     const s = (r.selected_keywords ?? []).filter(Boolean);
     if (s.length > 0) return s.join(" · ");
     return (r.description || "").slice(0, 20) || "—";
   };
+
 
   const displayFinalCredit = (r: Row) => {
     if (r.status === "rejected" || r.status === "rejected_by_ai") return 0;
@@ -215,7 +227,7 @@ const MyApplications = () => {
                     )}
                   >
                     <TableCell className="font-medium">{getAppTitle(r)}</TableCell>
-                    <TableCell className="max-w-xs truncate">{r.description}</TableCell>
+                    <TableCell className="max-w-xs truncate">{getItemsSummary(r)}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap items-center gap-1.5">
                         <StatusBadge status={r.status} audience="student" />

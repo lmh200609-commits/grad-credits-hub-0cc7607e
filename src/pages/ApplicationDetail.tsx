@@ -628,10 +628,13 @@ const ApplicationDetail = () => {
             <div><span className="text-muted-foreground">学生：</span>{student?.full_name} · {student?.student_no} · {student?.email}</div>
             <div><span className="text-muted-foreground">提交时间：</span>{new Date(app.submitted_at).toLocaleString()}</div>
             <Separator />
-            <div>
-              <div className="mb-1 text-muted-foreground">申请说明</div>
-              <p className="whitespace-pre-wrap rounded bg-muted/50 p-3">{app.description}</p>
-            </div>
+            {formItems.length === 0 && (
+              <div>
+                <div className="mb-1 text-muted-foreground">申请说明</div>
+                <p className="whitespace-pre-wrap rounded bg-muted/50 p-3">{app.description}</p>
+              </div>
+            )}
+
             {app.selected_keywords.length > 0 && (
               <div>
                 <div className="mb-1 text-muted-foreground">学生选择的关键词</div>
