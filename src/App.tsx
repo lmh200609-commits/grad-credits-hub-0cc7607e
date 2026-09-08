@@ -32,6 +32,7 @@ import Students from "./pages/teacher/Students.tsx";
 import StudentDetail from "./pages/teacher/StudentDetail.tsx";
 import TeacherDashboard from "./pages/teacher/Dashboard.tsx";
 import TeacherCredits from "./pages/teacher/Credits.tsx";
+import TeacherClasses from "./pages/teacher/Classes.tsx";
 import VerifyCertificate from "./pages/VerifyCertificate.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import RealtimeDiagnostics from "./pages/RealtimeDiagnostics.tsx";

@@ -12,7 +12,7 @@ import AiAssistant from "@/components/AiAssistant";
 import StaffAiAssistant from "@/components/StaffAiAssistant";
 import {
   LayoutDashboard, Upload, BookOpen, ClipboardCheck, FileText, Library, LogOut,
-  Users, BarChart3, Trophy, UserCog, Inbox, Send, ScrollText, Tags, History, Cpu, IdCard,
+  Users, BarChart3, Trophy, UserCog, Inbox, Send, ScrollText, Tags, History, Cpu, IdCard, GraduationCap,
   Activity, Palette, Building2, Shield, CalendarRange, ScanEye,
 } from "lucide-react";
 
@@ -62,6 +62,7 @@ const teacherItems: Item[] = [
   { title: "待审核", url: "/reviews", icon: ClipboardCheck },
   { title: "提交记录", url: "/submissions", icon: History },
   { title: "学分排名", url: "/teacher/credits", icon: Trophy },
+  { title: "班级学分", url: "/teacher/classes", icon: GraduationCap },
   { title: "学生管理", url: "/teacher/students", icon: Users },
   { title: "实时一致性", url: "/diagnostics/realtime", icon: Activity },
 ];
