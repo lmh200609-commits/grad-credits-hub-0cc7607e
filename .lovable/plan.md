@@ -33,5 +33,5 @@
   - 「二、创新创业」互联网+分支补 `has(level, "校")` 档；新增 `CONTEST_ALIASES` 词表并在分支判断中使用。
   - 新增大类回落逻辑：`fail` 之前先尝试按学科竞赛规则重算。
   - 「四、职业技能」第二课堂分支改为先 `parseHours`，能算就返回具体学分。
-- `src/pages/student/Apply.tsx` 与 `src/pages/ApplicationDetail.tsx` 的合规徽标处渲染 `hint`（tooltip 或副文本），不改提交逻辑：超标仍只警告不拦截。
+- `src/pages/ApplicationDetail.tsx`（教师端）的合规徽标旁渲染 `hint` 原因说明；`src/pages/student/Apply.tsx` 学生端仅显示现有「待核对」文案，不改提交逻辑：超标仍只警告不拦截。
 - 不涉及数据库改动。
