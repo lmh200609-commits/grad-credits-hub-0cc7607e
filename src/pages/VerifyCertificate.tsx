@@ -44,7 +44,7 @@ const VerifyCertificate = () => {
               <Row k="院系" v={r.department ?? "—"} />
               <Row k="认定项目" v={r.project} />
               <Row k="认定学分" v={String(r.credit)} />
-              <Row k="签发日期" v={new Date(r.issued_at).toLocaleDateString()} />
+              <Row k="签发日期" v={new Date(r.issued_at).toLocaleDateString("zh-CN")} />
             </>
           )}
           {r && !r.ok && "error" in r && (

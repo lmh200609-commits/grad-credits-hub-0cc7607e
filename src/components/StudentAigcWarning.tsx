@@ -58,7 +58,7 @@ export default function StudentAigcWarning({
           <div className="mt-1 text-sm text-foreground/80">{body}</div>
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs opacity-80">
             {pct && <span>AI 生成概率 {pct}%</span>}
-            {checkedAt && <span>检测时间 {new Date(checkedAt).toLocaleString()}</span>}
+            {checkedAt && <span>检测时间 {new Date(checkedAt).toLocaleString("zh-CN", { hour12: false })}</span>}
             {detailHref && (
               <Link to={detailHref} className="ml-auto underline-offset-2 hover:underline">
                 查看详情 ›

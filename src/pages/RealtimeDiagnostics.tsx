@@ -87,9 +87,9 @@ type ServerInfo = {
 };
 
 const fmtTime = (ts: number | null | undefined) =>
-  ts ? new Date(ts).toLocaleTimeString() : "—";
+  ts ? new Date(ts).toLocaleTimeString("zh-CN", { hour12: false }) : "—";
 const fmtIso = (s: string | null | undefined) =>
-  s ? new Date(s).toLocaleString() : "—";
+  s ? new Date(s).toLocaleString("zh-CN", { hour12: false }) : "—";
 
 const RealtimeDiagnostics = () => {
   const { roles } = useAuth();

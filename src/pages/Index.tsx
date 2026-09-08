@@ -202,7 +202,7 @@ const StudentWorkbench = () => {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{r.description || "未命名申请"}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(r.submitted_at).toLocaleDateString()}
+                        {new Date(r.submitted_at).toLocaleDateString("zh-CN")}
                       </p>
                     </div>
                     <StatusBadge status={r.status} audience="student" />
@@ -359,7 +359,7 @@ const TeacherWorkbench = () => {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">{r.description || "未命名申请"}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(r.submitted_at).toLocaleDateString()}
+                        {new Date(r.submitted_at).toLocaleDateString("zh-CN")}
                       </p>
                     </div>
                     <StatusBadge status={r.status} />

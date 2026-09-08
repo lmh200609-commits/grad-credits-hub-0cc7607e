@@ -95,7 +95,7 @@ const StudentDetail = () => {
                   apps.map((a) => (
                     <TableRow key={a.id}>
                       <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {new Date(a.submitted_at).toLocaleString("zh-CN")}
+                        {new Date(a.submitted_at).toLocaleString("zh-CN", { hour12: false })}
                       </TableCell>
                       <TableCell className="max-w-md truncate">{a.description}</TableCell>
                       <TableCell><StatusBadge status={a.status} /></TableCell>

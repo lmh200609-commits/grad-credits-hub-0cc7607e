@@ -459,7 +459,7 @@ const ApplicationDetail = () => {
       if (error) throw error;
       toast({
         title: "已回滚到上一轮 AI 结果",
-        description: snap.taken_at ? `备份时间：${new Date(snap.taken_at).toLocaleString()}` : undefined,
+        description: snap.taken_at ? `备份时间：${new Date(snap.taken_at).toLocaleString("zh-CN", { hour12: false })}` : undefined,
       });
     } catch (e: any) {
       toastErrorLegacy(e, "回滚失败");
@@ -588,7 +588,7 @@ const ApplicationDetail = () => {
         {app.certificate_no && (
           <div className="text-xs text-muted-foreground">
             证书编号：<span className="font-mono">{app.certificate_no}</span>
-            {app.certificate_issued_at && <> · 首次签发：{new Date(app.certificate_issued_at).toLocaleString()}</>}
+            {app.certificate_issued_at && <> · 首次签发：{new Date(app.certificate_issued_at).toLocaleString("zh-CN", { hour12: false })}</>}
           </div>
         )}
 
@@ -627,7 +627,7 @@ const ApplicationDetail = () => {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div><span className="text-muted-foreground">学生：</span>{student?.full_name} · {student?.student_no} · {student?.email}</div>
-            <div><span className="text-muted-foreground">提交时间：</span>{new Date(app.submitted_at).toLocaleString()}</div>
+            <div><span className="text-muted-foreground">提交时间：</span>{new Date(app.submitted_at).toLocaleString("zh-CN", { hour12: false })}</div>
             <Separator />
             {formItems.length === 0 && (
               <div>
@@ -825,7 +825,7 @@ const ApplicationDetail = () => {
               {(app as any).ai_last_attempt_at && (
                 <CardDescription>
                   最近一次 AI 调用时间：
-                  {new Date((app as any).ai_last_attempt_at).toLocaleString()}
+                  {new Date((app as any).ai_last_attempt_at).toLocaleString("zh-CN", { hour12: false })}
                 </CardDescription>
               )}
             </CardHeader>
@@ -863,7 +863,7 @@ const ApplicationDetail = () => {
                 <div className="text-xs text-muted-foreground">
                   上次结果备份于
                   {" "}
-                  {new Date((app as any).ai_previous_snapshot.taken_at).toLocaleString()}
+                  {new Date((app as any).ai_previous_snapshot.taken_at).toLocaleString("zh-CN", { hour12: false })}
                   ，状态「{(app as any).ai_previous_snapshot.status ?? "—"}」
                 </div>
               )}
@@ -977,7 +977,7 @@ const ApplicationDetail = () => {
                       <span className="text-muted-foreground">判定确信度 {(Number(r.confidence) * 100).toFixed(0)}%</span>
                     )}
                   </div>
-                  <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()}</span>
+                  <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString("zh-CN", { hour12: false })}</span>
                 </div>
                 {r.note && <p className="mt-2 whitespace-pre-wrap text-muted-foreground">{r.note}</p>}
               </div>
