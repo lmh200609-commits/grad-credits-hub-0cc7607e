@@ -352,7 +352,7 @@ const ReviewHub = () => {
                             {r.status === "pending_review" && <ReviewSourceBadge source={r.review_source} />}
                           </div>
                         </TableCell>
-                        <TableCell className="text-xs">{new Date(r.submitted_at).toLocaleString()}</TableCell>
+                        <TableCell className="text-xs">{new Date(r.submitted_at).toLocaleString("zh-CN", { hour12: false })}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
                             {isAdmin && reviewable && (

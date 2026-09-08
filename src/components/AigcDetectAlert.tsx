@@ -134,7 +134,7 @@ export default function AigcDetectAlert({
               </a>
             </div>
           )}
-          {checkedAt && <div className="opacity-70">检测时间：{new Date(checkedAt).toLocaleString()}</div>}
+          {checkedAt && <div className="opacity-70">检测时间：{new Date(checkedAt).toLocaleString("zh-CN", { hour12: false })}</div>}
         </div>
       )}
     </div>

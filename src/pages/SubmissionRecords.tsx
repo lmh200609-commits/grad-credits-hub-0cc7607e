@@ -262,7 +262,7 @@ const SubmissionRecords = () => {
                       </TableCell>
                       <TableCell>{renderKeywords(r)}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {new Date(r.submitted_at).toLocaleString()}
+                        {new Date(r.submitted_at).toLocaleString("zh-CN", { hour12: false })}
                       </TableCell>
                     </TableRow>
                   );
@@ -291,7 +291,7 @@ const SubmissionRecords = () => {
                     {manualReviewBadge}
                   </div>
                   <SheetDescription>
-                    提交时间：{new Date(current.submitted_at).toLocaleString()} · 第 {(openIdx ?? 0) + 1} / {rows.length} 条（↑↓ 切换）
+                    提交时间：{new Date(current.submitted_at).toLocaleString("zh-CN", { hour12: false })} · 第 {(openIdx ?? 0) + 1} / {rows.length} 条（↑↓ 切换）
                   </SheetDescription>
                 </SheetHeader>
 
@@ -397,7 +397,7 @@ const SubmissionRecords = () => {
                             </Badge>
                             <StatusBadge status={r.decision as any} />
                             {r.credit != null && <span className="text-muted-foreground">学分 {r.credit}</span>}
-                            <span className="ml-auto text-muted-foreground">{new Date(r.created_at).toLocaleString()}</span>
+                            <span className="ml-auto text-muted-foreground">{new Date(r.created_at).toLocaleString("zh-CN", { hour12: false })}</span>
                           </div>
                           {r.note && <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{r.note}</p>}
                         </div>

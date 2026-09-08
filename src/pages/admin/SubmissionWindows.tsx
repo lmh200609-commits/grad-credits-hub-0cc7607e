@@ -264,13 +264,13 @@ const SubmissionWindows = () => {
                   return (
                     <TableRow key={w.id}>
                       <TableCell className="font-medium">{w.name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{new Date(w.starts_at).toLocaleString()}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{new Date(w.ends_at).toLocaleString()}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{new Date(w.starts_at).toLocaleString("zh-CN", { hour12: false })}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{new Date(w.ends_at).toLocaleString("zh-CN", { hour12: false })}</TableCell>
                       <TableCell><Badge variant={st.tone}>{st.label}</Badge></TableCell>
                       <TableCell><Switch checked={w.active} onCheckedChange={() => toggleActive(w)} /></TableCell>
                       <TableCell className="text-sm">
                         {w.report_generated_at
-                          ? <span className="text-success">已生成 {new Date(w.report_generated_at).toLocaleString()}</span>
+                          ? <span className="text-success">已生成 {new Date(w.report_generated_at).toLocaleString("zh-CN", { hour12: false })}</span>
                           : <span className="text-muted-foreground">未生成</span>}
                       </TableCell>
                       <TableCell className="text-right">

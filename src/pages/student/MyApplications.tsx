@@ -182,7 +182,7 @@ const MyApplications = () => {
               <div>
                 <div className="font-medium">当前提交批次：{openWindow.name}</div>
                 <div className="text-muted-foreground">
-                  开放时间：{new Date(openWindow.starts_at).toLocaleString()} 至 {new Date(openWindow.ends_at).toLocaleString()}
+                  开放时间：{new Date(openWindow.starts_at).toLocaleString("zh-CN", { hour12: false })} 至 {new Date(openWindow.ends_at).toLocaleString("zh-CN", { hour12: false })}
                 </div>
               </div>
             </CardContent>
@@ -196,7 +196,7 @@ const MyApplications = () => {
                 <div className="font-medium">当前不在开放提交时间内，无法提交新申请</div>
                 <div className="text-muted-foreground">
                   {nextWindow
-                    ? `下一批次「${nextWindow.name}」将于 ${new Date(nextWindow.starts_at).toLocaleString()} 开放`
+                    ? `下一批次「${nextWindow.name}」将于 ${new Date(nextWindow.starts_at).toLocaleString("zh-CN", { hour12: false })} 开放`
                     : "请等待管理员开放新的提交批次"}
                 </div>
               </div>
@@ -249,7 +249,7 @@ const MyApplications = () => {
                     </TableCell>
                     <TableCell>{r.ai_suggested_credit ?? "—"}</TableCell>
                     <TableCell>{displayFinalCredit(r)}</TableCell>
-                    <TableCell className="text-xs">{new Date(r.submitted_at).toLocaleString()}</TableCell>
+                    <TableCell className="text-xs">{new Date(r.submitted_at).toLocaleString("zh-CN", { hour12: false })}</TableCell>
                     <TableCell className="text-right">
                       <Button size="sm" variant="ghost" onClick={() => navigate(`/applications/${r.id}`)}>详情</Button>
                     </TableCell>

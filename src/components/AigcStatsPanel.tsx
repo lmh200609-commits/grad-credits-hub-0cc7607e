@@ -368,7 +368,7 @@ export default function AigcStatsPanel() {
     const header = ["申请ID", "提交时间", "AI状态", "AI概率(%)", "申请描述", "学院ID"];
     const lines = filtered.map((r) => [
       r.id,
-      new Date(r.submitted_at).toLocaleString(),
+      new Date(r.submitted_at).toLocaleString("zh-CN", { hour12: false }),
       STATUS_LABELS[r.aigc_status],
       typeof r.aigc_score === "number" ? (r.aigc_score * 100).toFixed(1) : "",
       (r.description ?? "").slice(0, 40).replace(/[\r\n]+/g, " "),
@@ -605,7 +605,7 @@ export default function AigcStatsPanel() {
             <div style={{ borderBottom: "2px solid #0f172a", paddingBottom: 12, marginBottom: 16 }}>
               <div style={{ fontSize: 22, fontWeight: 700 }}>AI 生成材料鉴别报告</div>
               <div style={{ marginTop: 6, fontSize: 12, color: "#475569" }}>
-                范围：{scopeLabel} · {rangeLabel} · 状态筛选：{statuses.map((s) => STATUS_LABELS[s]).join(" / ")} · 生成于 {new Date().toLocaleString()}
+                范围：{scopeLabel} · {rangeLabel} · 状态筛选：{statuses.map((s) => STATUS_LABELS[s]).join(" / ")} · 生成于 {new Date().toLocaleString("zh-CN", { hour12: false })}
               </div>
               <div style={{ marginTop: 4, fontSize: 12, color: "#475569" }}>
                 覆盖学生 <b>{summaryCounts.students}</b> 人 · 涉及班级 <b>{summaryCounts.classes}</b> 个 · 涉及学院 <b>{summaryCounts.colleges}</b> 个 · 申请条数 <b>{filtered.length}</b>
@@ -686,7 +686,7 @@ export default function AigcStatsPanel() {
                     {topRisky.map((r, i) => (
                       <tr key={r.id}>
                         <td style={td}>{i + 1}</td>
-                        <td style={td}>{new Date(r.submitted_at).toLocaleString()}</td>
+                        <td style={td}>{new Date(r.submitted_at).toLocaleString("zh-CN", { hour12: false })}</td>
                         <td style={{ ...td, color: r.aigc_status === "fake" ? "#b91c1c" : "#b45309", fontWeight: 600 }}>
                           {STATUS_LABELS[r.aigc_status]}
                         </td>
@@ -819,7 +819,7 @@ export default function AigcStatsPanel() {
                                 <td style={{ ...td, color: s.fake ? "#b91c1c" : "#0f172a", fontWeight: s.fake ? 600 : 400 }}>{s.fake}</td>
                                 <td style={{ ...td, color: s.suspect ? "#b45309" : "#0f172a" }}>{s.suspect}</td>
                                 <td style={td}>{(s.maxScore * 100).toFixed(1)}%</td>
-                                <td style={td}>{s.lastSubmittedAt ? new Date(s.lastSubmittedAt).toLocaleString() : "—"}</td>
+                                <td style={td}>{s.lastSubmittedAt ? new Date(s.lastSubmittedAt).toLocaleString("zh-CN", { hour12: false }) : "—"}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -851,7 +851,7 @@ export default function AigcStatsPanel() {
                                   {items.map((r, ri) => (
                                     <tr key={r.id}>
                                       <td style={td}>{ri + 1}</td>
-                                      <td style={td}>{new Date(r.submitted_at).toLocaleString()}</td>
+                                      <td style={td}>{new Date(r.submitted_at).toLocaleString("zh-CN", { hour12: false })}</td>
                                       <td style={{ ...td, color: r.aigc_status === "fake" ? "#b91c1c" : "#b45309", fontWeight: 600 }}>
                                         {STATUS_LABELS[r.aigc_status]}
                                       </td>
@@ -899,7 +899,7 @@ export default function AigcStatsPanel() {
                     {orphanRows.slice(0, 100).map((r, i) => (
                       <tr key={r.id}>
                         <td style={td}>{i + 1}</td>
-                        <td style={td}>{new Date(r.submitted_at).toLocaleString()}</td>
+                        <td style={td}>{new Date(r.submitted_at).toLocaleString("zh-CN", { hour12: false })}</td>
                         <td style={{ ...td, fontWeight: 600 }}>{STATUS_LABELS[r.aigc_status]}</td>
                         <td style={td}>{typeof r.aigc_score === "number" ? `${(r.aigc_score * 100).toFixed(1)}%` : "—"}</td>
                         <td style={{ ...td, textAlign: "left", fontFamily: "monospace", fontSize: 10 }}>{r.student_id?.slice(0, 8) ?? "—"}…</td>
@@ -1005,7 +1005,7 @@ function RiskyTable({
                   onClick={() => onRowClick(r.id)}
                 >
                   <td className="px-2 py-2 text-muted-foreground">{i + 1}</td>
-                  <td className="px-2 py-2 whitespace-nowrap">{new Date(r.submitted_at).toLocaleString()}</td>
+                  <td className="px-2 py-2 whitespace-nowrap">{new Date(r.submitted_at).toLocaleString("zh-CN", { hour12: false })}</td>
                   <td className={`px-2 py-2 font-medium ${r.aigc_status === "fake" ? "text-destructive" : "text-warning"}`}>
                     {r.aigc_status === "fake" ? "高风险" : "嫌疑"}
                   </td>

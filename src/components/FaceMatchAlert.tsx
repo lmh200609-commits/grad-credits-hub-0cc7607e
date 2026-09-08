@@ -121,7 +121,7 @@ export default function FaceMatchAlert({
           <div>{meta.hint}</div>
           {note && <div>AI 说明：{note}</div>}
           {checkedAt && (
-            <div className="opacity-70">检测时间：{new Date(checkedAt).toLocaleString()}</div>
+            <div className="opacity-70">检测时间：{new Date(checkedAt).toLocaleString("zh-CN", { hour12: false })}</div>
           )}
           <div className="opacity-70">
             提示：人脸比对仅用于辅助参考，<b>不影响材料有效性判定</b>。

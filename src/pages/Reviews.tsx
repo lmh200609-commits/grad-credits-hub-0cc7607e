@@ -258,7 +258,7 @@ const ReviewsList = () => {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-xs">{new Date(r.submitted_at).toLocaleString()}</TableCell>
+                      <TableCell className="text-xs">{new Date(r.submitted_at).toLocaleString("zh-CN", { hour12: false })}</TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" onClick={() => navigate(`/applications/${r.id}`)}>查看</Button>
                       </TableCell>

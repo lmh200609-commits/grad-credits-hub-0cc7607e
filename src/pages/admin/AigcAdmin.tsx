@@ -243,7 +243,7 @@ const AigcAdmin = () => {
                       <TableCell className="max-w-[420px] truncate text-xs text-destructive" title={f.last_error || ""}>
                         {f.last_error || "—"}
                       </TableCell>
-                      <TableCell className="text-xs">{new Date(f.failed_at).toLocaleString()}</TableCell>
+                      <TableCell className="text-xs">{new Date(f.failed_at).toLocaleString("zh-CN", { hour12: false })}</TableCell>
                       <TableCell className="text-right">
                         <Button size="sm" variant="outline" onClick={() => retryOne(f.application_id)}>
                           重试

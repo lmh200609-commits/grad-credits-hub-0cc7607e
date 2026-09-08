@@ -214,7 +214,7 @@ const RulesPage = () => {
                     <TableCell>{r.category ?? "—"}</TableCell>
                     <TableCell className="max-w-xs">
                       <div className="flex flex-wrap gap-1">
-                        {r.keywords.slice(0, 6).map((k) => <Badge key={k} variant="secondary">{k}</Badge>)}
+                        {r.keywords.slice(0, 6).map((k, i) => <Badge key={`${k}-${i}`} variant="secondary">{k}</Badge>)}
                         {r.keywords.length > 6 && <span className="text-xs text-muted-foreground">+{r.keywords.length - 6}</span>}
                       </div>
                     </TableCell>
