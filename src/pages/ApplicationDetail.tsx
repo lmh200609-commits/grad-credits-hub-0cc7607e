@@ -355,7 +355,21 @@ const ApplicationDetail = () => {
     } else {
       toast({ title: "已驳回" });
     }
+
+    // 教师通过时：若图片尚未做过 AI 生图鉴别，自动补做一次
+    if (
+      decision === "approved" &&
+      (!app.aigc_status || app.aigc_status === "pending") &&
+      /\.(png|jpe?g|webp|gif|bmp)$/i.test(String((app as any).file_path ?? ""))
+    ) {
+      try {
+        await supabase.functions.invoke("aigc-detect", { body: { application_id: app.id } });
+      } catch (e) {
+        console.warn("[aigc-detect] 自动补做失败", e);
+      }
+    }
     load();
+
     } finally {
       setSubmitting(false);
     }
