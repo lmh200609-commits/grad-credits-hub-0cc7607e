@@ -50,8 +50,8 @@ const UsersManage = () => {
   const { user } = useAuth();
   const selfId = user?.id ?? null;
   const { role: roleParam } = useParams<{ role: string }>();
-  const role = roleParam === "teachers" ? "teacher" : "student";
-  const meta = TITLES[roleParam ?? "students"] ?? TITLES.students;
+  const role = (roleParam ?? "").startsWith("teacher") ? "teacher" : "student";
+  const meta = TITLES[role === "teacher" ? "teachers" : "students"] ?? TITLES.students;
   const [sp] = useSearchParams();
   const initialSearch = sp.get("search") ?? "";
 

@@ -14,7 +14,6 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { toast } from "sonner";
 import { Plus, Trash2, Search, Pencil } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
-import TableSkeleton from "@/components/TableSkeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { toastErrorLegacy } from "@/lib/errors";
 import { COMPETITION_CATEGORIES, LEVEL_TIERS, type CompetitionEntry } from "@/lib/catalog";
@@ -48,11 +47,13 @@ const CompetitionsPage = () => {
     const { data, error } = await supabase
       .from("competition_catalog").select("*").order("name");
     if (error) toastErrorLegacy(error, "加载失败");
-    setItems(((data ?? []) as unknown as CompetitionEntry[]));
+    const all = (data ?? []) as any[];
+    const scoped = collegeId ? all.filter((r) => r.college_id === collegeId) : all.filter((r) => r.college_id == null);
+    setItems(scoped as unknown as CompetitionEntry[]);
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [collegeId]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -123,7 +124,7 @@ const CompetitionsPage = () => {
             <Button onClick={openNew}><Plus className="mr-1 h-4 w-4" />新增赛事</Button>
           </div>
 
-          {loading ? <TableSkeleton /> : filtered.length === 0 ? (
+          {loading ? <div className="space-y-2">{[0,1,2,3,4].map((i) => (<div key={i} className="h-10 animate-pulse rounded-md bg-muted" />))}</div> : filtered.length === 0 ? (
             <EmptyState title="暂无赛事" description="点击「新增赛事」添加认可的比赛名称与简称。" />
           ) : (
             <div className="rounded-md border">

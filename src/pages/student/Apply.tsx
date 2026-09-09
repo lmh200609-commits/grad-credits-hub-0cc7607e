@@ -92,7 +92,7 @@ export default function Apply() {
 
   // 赛事 / 证书名录
   const [catalogs, setCatalogs] = useState<Catalogs>(EMPTY_CATALOGS);
-  useEffect(() => { loadCatalogs().then(setCatalogs).catch(() => {}); }, []);
+  useEffect(() => { loadCatalogs(collegeId).then(setCatalogs).catch(() => {}); }, [collegeId]);
 
   // 每条目的标准学分比对
   const itemChecks = useMemo(() => {
