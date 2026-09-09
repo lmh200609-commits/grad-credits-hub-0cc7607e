@@ -15,6 +15,9 @@ import ImportUsers from "./pages/admin/ImportUsers.tsx";
 import Rules from "./pages/admin/Rules.tsx";
 import Keywords from "./pages/admin/Keywords.tsx";
 import Cases from "./pages/admin/Cases.tsx";
+import Competitions from "./pages/admin/Competitions.tsx";
+import CertificatesCatalog from "./pages/admin/Certificates.tsx";
+
 import AdminDashboard from "./pages/admin/Dashboard.tsx";
 import ReviewHub from "./pages/admin/ReviewHub.tsx";
 import Credits from "./pages/admin/Credits.tsx";
@@ -68,6 +71,9 @@ const App = () => (
             <Route path="/admin/rules" element={<RoleRoute role="admin"><Rules /></RoleRoute>} />
             <Route path="/admin/keywords" element={<RoleRoute role="admin"><Keywords /></RoleRoute>} />
             <Route path="/admin/cases" element={<RoleRoute role="admin"><Cases /></RoleRoute>} />
+            <Route path="/admin/competitions" element={<RoleRoute role="admin"><Competitions /></RoleRoute>} />
+            <Route path="/admin/certificates" element={<RoleRoute role="admin"><CertificatesCatalog /></RoleRoute>} />
+
             <Route path="/admin/audit-logs" element={<RoleRoute role="admin"><AuditLogs /></RoleRoute>} />
             <Route path="/admin/ai-models" element={<RoleRoute role="super_admin"><AiModels /></RoleRoute>} />
             <Route path="/admin/aigc" element={<RoleRoute role="super_admin"><AigcAdmin /></RoleRoute>} />

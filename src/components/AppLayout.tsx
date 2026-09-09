@@ -27,6 +27,9 @@ const adminItems: Item[] = [
   { title: "规则库", url: "/admin/rules", icon: BookOpen },
   { title: "关键词库", url: "/admin/keywords", icon: Tags },
   { title: "案例库", url: "/admin/cases", icon: Library },
+  { title: "赛事名录", url: "/admin/competitions", icon: Trophy },
+  { title: "证书名录", url: "/admin/certificates", icon: IdCard },
+
   { title: "学生管理", url: "/admin/users/students", icon: Users },
   { title: "教师管理", url: "/admin/users/teachers", icon: UserCog },
   { title: "批量导入账号", url: "/admin/import", icon: Upload },
@@ -47,6 +50,9 @@ const superAdminItems: Item[] = [
   { title: "规则库", url: "/admin/rules", icon: BookOpen },
   { title: "关键词库", url: "/admin/keywords", icon: Tags },
   { title: "案例库", url: "/admin/cases", icon: Library },
+  { title: "赛事名录", url: "/admin/competitions", icon: Trophy },
+  { title: "证书名录", url: "/admin/certificates", icon: IdCard },
+
   { title: "学生管理", url: "/admin/users/students", icon: Users },
   { title: "教师管理", url: "/admin/users/teachers", icon: UserCog },
   { title: "批量导入账号", url: "/admin/import", icon: Upload },

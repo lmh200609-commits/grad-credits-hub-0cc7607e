@@ -19,6 +19,8 @@ import { sha256Hex as sha256OfFile } from "@/lib/fileHash";
 import { randomUUID as newUuid } from "@/lib/uuid";
 import { parseApplicationForm, serializeItems, type FormItem } from "@/lib/parseForm";
 import { lookupStandardCredit, checkCreditCompliance, COMPLIANCE_LABEL } from "@/lib/creditStandard";
+import { Catalogs, EMPTY_CATALOGS, loadCatalogs } from "@/lib/catalog";
+
 import { buildAchievementFingerprint } from "@/lib/keywordFingerprint";
 
 const BUCKET = "application-files";
@@ -88,6 +90,10 @@ export default function Apply() {
     })();
   }, [collegeId]);
 
+  // 赛事 / 证书名录
+  const [catalogs, setCatalogs] = useState<Catalogs>(EMPTY_CATALOGS);
+  useEffect(() => { loadCatalogs().then(setCatalogs).catch(() => {}); }, []);
+
   // 每条目的标准学分比对
   const itemChecks = useMemo(() => {
     if (!items) return [];
@@ -95,10 +101,11 @@ export default function Apply() {
       const std = lookupStandardCredit({
         category: it.category, project: it.project,
         achievement: it.achievement, level: it.level, rank: it.rank,
-      });
+      }, catalogs);
       return { item: it, std, compliance: checkCreditCompliance(it.credit, std) };
     });
-  }, [items]);
+  }, [items, catalogs]);
+
 
   const claimedTotal = useMemo(
     () => (items ?? []).reduce((s, it) => s + (it.credit ?? 0), 0),
@@ -396,10 +403,8 @@ export default function Apply() {
                             {compliance === "under" && (
                               <Badge variant="outline" className="text-warning border-warning/40">偏低{std.credit != null ? `（标准 ${std.credit}）` : ""}</Badge>
                             )}
-                            {compliance === "unknown" && <Badge variant="secondary">待人工核定</Badge>}
-                            {std.basis && compliance !== "ok" && (
-                              <div className="mt-0.5 max-w-[220px] text-xs text-muted-foreground">{std.basis}</div>
-                            )}
+                            {compliance === "unknown" && <Badge variant="secondary">待核对</Badge>}
+
                           </TableCell>
                         </TableRow>
                       ))}

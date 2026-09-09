@@ -4,6 +4,8 @@
 // 匹配策略：按「大类 → 认定项目 → 成果/级别关键词 → 排名关键词」依次收敛；
 // 匹配不到返回 null（unknown），不误报。
 
+import { Catalogs, EMPTY_CATALOGS, matchCertificate, matchCompetition } from "./catalog";
+
 export type CreditCompliance = "ok" | "over" | "under" | "unknown";
 
 export interface StandardLookup {
@@ -12,6 +14,8 @@ export interface StandardLookup {
   max?: number;
   basis: string;              // 依据描述，如「学科竞赛·国家级B类·一等奖·团队负责人」
   matched: boolean;
+  catalogName?: string;       // 命中的名录条目（赛事/证书标准名称）
+  normalizedLevel?: string;   // 归一后的级别档
 }
 
 export interface LookupInput {
@@ -23,6 +27,32 @@ export interface LookupInput {
 }
 
 const has = (s: string, ...keys: string[]) => keys.some((k) => s.includes(k));
+
+/** 级别写法归一：国家级C类 / 国际级C类 按省部级A类降档计分 */
+export function normalizeLevel(raw: string): string | null {
+  const s = (raw || "").replace(/\s|（|）|\(|\)/g, "");
+  if (!s) return null;
+  if (has(s, "国际级C", "国际C", "国家级C", "国家C")) return "省部级A类";
+  if (has(s, "国家级A", "国家A", "国际级A", "国际A")) return "国家级A类";
+  if (has(s, "国家级B", "国家B", "国际级B", "国际B")) return "国家级B类";
+  if (has(s, "国家", "全国", "国际")) return "国家级B类";
+  if (has(s, "省") || has(s, "部")) {
+    if (has(s, "B类") || /省级?B/.test(s)) return "省部级B类";
+    return "省部级A类";
+  }
+  if (has(s, "市")) return "省部级B类";
+  if (has(s, "校", "院")) return "校级";
+  return null;
+}
+
+/** 奖次归一：特等/一等/金奖→1，二等/银奖→2，三等/铜奖/优秀→3，其余 null */
+export function normalizePrize(raw: string): 1 | 2 | 3 | null {
+  const s = raw || "";
+  if (has(s, "特等", "一等", "金奖", "冠军", "第一名")) return 1;
+  if (has(s, "二等", "银奖", "亚军", "第二名")) return 2;
+  if (has(s, "三等", "铜奖", "季军", "第三名", "优秀奖", "优胜奖")) return 3;
+  return null;
+}
 
 // 排名/角色 → 档位数
 function rankSlot(rank: string, slots: { key: string[]; credit: number }[]): number | null {
@@ -36,15 +66,61 @@ const LEADER_KEYS = ["负责人", "主持人", "第一作者", "第一署名", "
 const FIRST_KEYS = ["第一参与", "第二", "次位"];
 const OTHER_KEYS = ["其他", "参与", "成员", "第三", "第四", "第五", "团队"];
 
-export function lookupStandardCredit(input: LookupInput): StandardLookup {
-  const cat = input.category || "";
+
+export function lookupStandardCredit(input: LookupInput, catalogs: Catalogs = EMPTY_CATALOGS): StandardLookup {
+  const first = lookupOnce(input, catalogs);
+  if (first.matched) return first;
+  // 名录命中但所在大类未覆盖该级别（如互联网+校赛）→ 按学科竞赛档位再试一次
+  const comp = matchCompetition(catalogs, `${input.project} ${input.achievement}`);
+  if (comp) {
+    const retry = lookupOnce({ ...input, category: "学科竞赛" }, catalogs);
+    if (retry.matched) return { ...retry, catalogName: comp.name };
+    return { credit: null, matched: true, catalogName: comp.name, basis: `${comp.name}：级别或奖次未能确定，需教师核定` };
+  }
+  return first;
+}
+
+function lookupOnce(input: LookupInput, catalogs: Catalogs): StandardLookup {
+
+  let cat = input.category || "";
   const proj = `${input.project} ${input.achievement}`;
-  const level = input.level || "";
   const achieve = input.achievement || "";
   const rank = input.rank || "";
-  const basisHead = `${cat || "未分类"}·${input.project || "未填写"}`;
 
-  const fail: StandardLookup = { credit: null, basis: "", matched: false };
+  // 名录识别：赛事名录（识别标准赛事及简称）/ 证书名录
+  const comp = matchCompetition(catalogs, proj);
+  const cert = !comp ? matchCertificate(catalogs, proj) : null;
+  // 学生大类填写不明确（未分类/其他）时，采用名录中的大类
+  if (comp && (!cat || has(cat, "其他", "未分类"))) cat = comp.category || cat;
+
+  if (cert) cat = "职业技能";
+
+  // 级别归一：国家级C类/国际级C类 按省部级A类降档
+  const level = normalizeLevel(input.level) ?? comp?.default_level ?? input.level ?? "";
+  const catalogName = comp?.name ?? cert?.name;
+  const basisHead = `${cat || "未分类"}·${catalogName ?? input.project ?? "未填写"}`;
+
+  const fail: StandardLookup = { credit: null, basis: "", matched: false, catalogName, normalizedLevel: normalizeLevel(input.level) ?? undefined };
+
+  // 名录中的证书：按名录类别与默认学分认定
+  if (cert) {
+    if (cert.default_credit != null) {
+      return {
+        credit: cert.default_credit, matched: true, catalogName: cert.name,
+        basis: `职业技能·${cert.name}（${cert.cert_class}${cert.level ? "·" + cert.level : ""}）`,
+      };
+    }
+    return {
+      credit: null, matched: true, catalogName: cert.name,
+      basis: `职业技能·${cert.name}（${cert.cert_class}）：需教师核定`,
+    };
+  }
+
+  // 学生自填的「其他」项目：一律交教师核定
+  if (has(cat, "其他") && !comp) {
+    return { credit: null, matched: true, basis: `${basisHead}：名录外项目，需教师核定` };
+  }
+
 
   // ============ 一、教学科研 ============
   if (has(cat, "教学科研", "科研")) {
@@ -181,11 +257,9 @@ export function lookupStandardCredit(input: LookupInput): StandardLookup {
 }
 
 function prizeOf(s: string): 1 | 2 | 3 | null {
-  if (has(s, "一等", "金奖", "冠军", "特等奖")) return 1;
-  if (has(s, "二等", "银奖", "亚军")) return 2;
-  if (has(s, "三等", "铜奖", "季军", "优秀奖")) return 3;
-  return null;
+  return normalizePrize(s);
 }
+
 
 function ok(credit: number, basis: string): StandardLookup {
   return { credit, basis, matched: true };
@@ -217,5 +291,5 @@ export const COMPLIANCE_LABEL: Record<CreditCompliance, string> = {
   ok: "符合标准",
   over: "高于标准",
   under: "低于标准",
-  unknown: "待人工核定",
+  unknown: "待核对",
 };
