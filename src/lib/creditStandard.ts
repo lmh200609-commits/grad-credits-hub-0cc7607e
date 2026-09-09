@@ -275,5 +275,5 @@ export const COMPLIANCE_LABEL: Record<CreditCompliance, string> = {
   ok: "符合标准",
   over: "高于标准",
   under: "低于标准",
-  unknown: "待人工核定",
+  unknown: "待核对",
 };
