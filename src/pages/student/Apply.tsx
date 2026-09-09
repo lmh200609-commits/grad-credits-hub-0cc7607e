@@ -88,6 +88,10 @@ export default function Apply() {
     })();
   }, [collegeId]);
 
+  // 赛事 / 证书名录
+  const [catalogs, setCatalogs] = useState<Catalogs>(EMPTY_CATALOGS);
+  useEffect(() => { loadCatalogs().then(setCatalogs).catch(() => {}); }, []);
+
   // 每条目的标准学分比对
   const itemChecks = useMemo(() => {
     if (!items) return [];
@@ -95,10 +99,11 @@ export default function Apply() {
       const std = lookupStandardCredit({
         category: it.category, project: it.project,
         achievement: it.achievement, level: it.level, rank: it.rank,
-      });
+      }, catalogs);
       return { item: it, std, compliance: checkCreditCompliance(it.credit, std) };
     });
-  }, [items]);
+  }, [items, catalogs]);
+
 
   const claimedTotal = useMemo(
     () => (items ?? []).reduce((s, it) => s + (it.credit ?? 0), 0),
