@@ -403,10 +403,8 @@ export default function Apply() {
                             {compliance === "under" && (
                               <Badge variant="outline" className="text-warning border-warning/40">偏低{std.credit != null ? `（标准 ${std.credit}）` : ""}</Badge>
                             )}
-                            {compliance === "unknown" && <Badge variant="secondary">待人工核定</Badge>}
-                            {std.basis && compliance !== "ok" && (
-                              <div className="mt-0.5 max-w-[220px] text-xs text-muted-foreground">{std.basis}</div>
-                            )}
+                            {compliance === "unknown" && <Badge variant="secondary">待核对</Badge>}
+
                           </TableCell>
                         </TableRow>
                       ))}
