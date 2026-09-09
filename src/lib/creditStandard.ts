@@ -67,15 +67,44 @@ const FIRST_KEYS = ["第一参与", "第二", "次位"];
 const OTHER_KEYS = ["其他", "参与", "成员", "第三", "第四", "第五", "团队"];
 
 
-export function lookupStandardCredit(input: LookupInput): StandardLookup {
-  const cat = input.category || "";
+export function lookupStandardCredit(input: LookupInput, catalogs: Catalogs = EMPTY_CATALOGS): StandardLookup {
+  let cat = input.category || "";
   const proj = `${input.project} ${input.achievement}`;
-  const level = input.level || "";
   const achieve = input.achievement || "";
   const rank = input.rank || "";
-  const basisHead = `${cat || "未分类"}·${input.project || "未填写"}`;
 
-  const fail: StandardLookup = { credit: null, basis: "", matched: false };
+  // 名录识别：赛事名录（识别标准赛事及简称）/ 证书名录
+  const comp = matchCompetition(catalogs, proj);
+  const cert = !comp ? matchCertificate(catalogs, proj) : null;
+  if (comp && !has(cat, "教学科研")) cat = comp.category || cat;
+  if (cert) cat = "职业技能";
+
+  // 级别归一：国家级C类/国际级C类 按省部级A类降档
+  const level = normalizeLevel(input.level) ?? comp?.default_level ?? input.level ?? "";
+  const catalogName = comp?.name ?? cert?.name;
+  const basisHead = `${cat || "未分类"}·${catalogName ?? input.project ?? "未填写"}`;
+
+  const fail: StandardLookup = { credit: null, basis: "", matched: false, catalogName, normalizedLevel: normalizeLevel(input.level) ?? undefined };
+
+  // 名录中的证书：按名录类别与默认学分认定
+  if (cert) {
+    if (cert.default_credit != null) {
+      return {
+        credit: cert.default_credit, matched: true, catalogName: cert.name,
+        basis: `职业技能·${cert.name}（${cert.cert_class}${cert.level ? "·" + cert.level : ""}）`,
+      };
+    }
+    return {
+      credit: null, matched: true, catalogName: cert.name,
+      basis: `职业技能·${cert.name}（${cert.cert_class}）：需教师核定`,
+    };
+  }
+
+  // 学生自填的「其他」项目：一律交教师核定
+  if (has(cat, "其他") && !comp) {
+    return { credit: null, matched: true, basis: `${basisHead}：名录外项目，需教师核定` };
+  }
+
 
   // ============ 一、教学科研 ============
   if (has(cat, "教学科研", "科研")) {
