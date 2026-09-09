@@ -68,6 +68,20 @@ const OTHER_KEYS = ["其他", "参与", "成员", "第三", "第四", "第五", 
 
 
 export function lookupStandardCredit(input: LookupInput, catalogs: Catalogs = EMPTY_CATALOGS): StandardLookup {
+  const first = lookupOnce(input, catalogs);
+  if (first.matched) return first;
+  // 名录命中但所在大类未覆盖该级别（如互联网+校赛）→ 按学科竞赛档位再试一次
+  const comp = matchCompetition(catalogs, `${input.project} ${input.achievement}`);
+  if (comp) {
+    const retry = lookupOnce({ ...input, category: "学科竞赛" }, catalogs);
+    if (retry.matched) return { ...retry, catalogName: comp.name };
+    return { credit: null, matched: true, catalogName: comp.name, basis: `${comp.name}：级别或奖次未能确定，需教师核定` };
+  }
+  return first;
+}
+
+function lookupOnce(input: LookupInput, catalogs: Catalogs): StandardLookup {
+
   let cat = input.category || "";
   const proj = `${input.project} ${input.achievement}`;
   const achieve = input.achievement || "";
