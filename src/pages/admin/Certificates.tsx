@@ -14,7 +14,6 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { toast } from "sonner";
 import { Plus, Trash2, Search, Pencil } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
-import TableSkeleton from "@/components/TableSkeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { toastErrorLegacy } from "@/lib/errors";
 import { CERT_CLASSES, type CertificateEntry } from "@/lib/catalog";
@@ -49,11 +48,13 @@ const CertificatesPage = () => {
     setLoading(true);
     const { data, error } = await supabase.from("certificate_catalog").select("*").order("cert_class").order("name");
     if (error) toastErrorLegacy(error, "加载失败");
-    setItems(((data ?? []) as unknown as CertificateEntry[]));
+    const all = (data ?? []) as any[];
+    const scoped = collegeId ? all.filter((r) => r.college_id === collegeId) : all.filter((r) => r.college_id == null);
+    setItems(scoped as unknown as CertificateEntry[]);
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [collegeId]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -129,7 +130,7 @@ const CertificatesPage = () => {
             <Button onClick={openNew}><Plus className="mr-1 h-4 w-4" />新增证书</Button>
           </div>
 
-          {loading ? <TableSkeleton /> : filtered.length === 0 ? (
+          {loading ? <div className="space-y-2">{[0,1,2,3,4].map((i) => (<div key={i} className="h-10 animate-pulse rounded-md bg-muted" />))}</div> : filtered.length === 0 ? (
             <EmptyState title="暂无证书" description="点击「新增证书」添加认可的证书名称。" />
           ) : (
             <div className="rounded-md border">

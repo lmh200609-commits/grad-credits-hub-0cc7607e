@@ -84,7 +84,7 @@ const App = () => (
             <Route path="/super/colleges" element={<RoleRoute role="super_admin"><SuperColleges /></RoleRoute>} />
             <Route path="/super/admins" element={<RoleRoute role="super_admin"><SuperAdmins /></RoleRoute>} />
             <Route path="/apply" element={<RoleRoute role="student"><Apply /></RoleRoute>} />
-            <Route path="/reviews" element={<ProtectedRoute><Reviews /></ProtectedRoute>} />
+            <Route path="/reviews" element={<RoleRoute role={["teacher", "admin"]}><Reviews /></RoleRoute>} />
             <Route path="/submissions" element={<RoleRoute role={["teacher", "admin"]}><SubmissionRecords /></RoleRoute>} />
             <Route path="/my-applications" element={<RoleRoute role="student"><MyApplications /></RoleRoute>} />
             <Route path="/profile" element={<RoleRoute role="student"><MyProfile /></RoleRoute>} />

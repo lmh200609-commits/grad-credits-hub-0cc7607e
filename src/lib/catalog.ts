@@ -90,7 +90,7 @@ export function matchCertificate(catalogs: Catalogs, text: string): CertificateE
 }
 
 /** 读取当前学院（含通用模板）的两张名录 */
-export async function loadCatalogs(): Promise<Catalogs> {
+export async function loadCatalogs(collegeId?: string | null): Promise<Catalogs> {
   const [comp, cert] = await Promise.all([
     supabase.from("competition_catalog").select("*").eq("active", true),
     supabase.from("certificate_catalog").select("*").eq("active", true),
@@ -99,8 +99,15 @@ export async function loadCatalogs(): Promise<Catalogs> {
   const certificates = (cert.data ?? []) as unknown as CertificateEntry[];
   // 学院自有条目优先；无学院条目时回落到通用模板（college_id 为空）
   const pick = <T extends { college_id: string | null; name: string }>(rows: T[]): T[] => {
-    const own = rows.filter((r) => r.college_id != null);
-    return own.length ? own : rows;
+    if (collegeId) {
+      const own = rows.filter((r) => r.college_id === collegeId);
+      if (own.length) return own;
+    }
+    const globals = rows.filter((r) => r.college_id == null);
+    if (globals.length) return globals;
+    // 去重：同名只保留一条
+    const seen = new Set<string>();
+    return rows.filter((r) => (seen.has(r.name) ? false : (seen.add(r.name), true)));
   };
   return { competitions: pick(competitions), certificates: pick(certificates) };
 }

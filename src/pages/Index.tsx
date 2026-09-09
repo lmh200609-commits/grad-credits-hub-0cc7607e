@@ -14,10 +14,20 @@ import EmptyState from "@/components/EmptyState";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { resolveDisplayName } from "@/lib/displayName";
+import { deserializeItems } from "@/lib/parseForm";
 import {
   ClipboardCheck, FileText, Send, Users, Inbox, CheckCircle2, XCircle,
   Clock, ArrowRight, Sparkles, FileCheck,
 } from "lucide-react";
+
+const appTitle = (description: string) => {
+  const items = deserializeItems(description);
+  if (items.length > 0) {
+    const t = items.map((it) => it.achievement).filter(Boolean).slice(0, 2).join(" · ");
+    if (t) return t;
+  }
+  return description?.trim() ? description.trim().slice(0, 40) : "未命名申请";
+};
 
 type AppRow = {
   id: string;
@@ -200,7 +210,7 @@ const StudentWorkbench = () => {
                     className="flex cursor-pointer items-center justify-between gap-3 py-3 transition-colors hover:bg-muted/40 -mx-2 px-2 rounded-md"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{r.description || "未命名申请"}</p>
+                      <p className="truncate text-sm font-medium">{appTitle(r.description)}</p>
                       <p className="text-xs text-muted-foreground">
                         {new Date(r.submitted_at).toLocaleDateString("zh-CN")}
                       </p>
@@ -357,7 +367,7 @@ const TeacherWorkbench = () => {
                     className="flex cursor-pointer items-center justify-between gap-3 py-3 transition-colors hover:bg-muted/40 -mx-2 px-2 rounded-md"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{r.description || "未命名申请"}</p>
+                      <p className="truncate text-sm font-medium">{appTitle(r.description)}</p>
                       <p className="text-xs text-muted-foreground">
                         {new Date(r.submitted_at).toLocaleDateString("zh-CN")}
                       </p>
