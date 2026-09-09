@@ -15,6 +15,9 @@ import ImportUsers from "./pages/admin/ImportUsers.tsx";
 import Rules from "./pages/admin/Rules.tsx";
 import Keywords from "./pages/admin/Keywords.tsx";
 import Cases from "./pages/admin/Cases.tsx";
+import Competitions from "./pages/admin/Competitions.tsx";
+import CertificatesCatalog from "./pages/admin/Certificates.tsx";
+
 import AdminDashboard from "./pages/admin/Dashboard.tsx";
 import ReviewHub from "./pages/admin/ReviewHub.tsx";
 import Credits from "./pages/admin/Credits.tsx";
