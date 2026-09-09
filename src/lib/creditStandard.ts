@@ -90,7 +90,9 @@ function lookupOnce(input: LookupInput, catalogs: Catalogs): StandardLookup {
   // 名录识别：赛事名录（识别标准赛事及简称）/ 证书名录
   const comp = matchCompetition(catalogs, proj);
   const cert = !comp ? matchCertificate(catalogs, proj) : null;
-  if (comp && !has(cat, "教学科研")) cat = comp.category || cat;
+  // 学生大类填写不明确（未分类/其他）时，采用名录中的大类
+  if (comp && (!cat || has(cat, "其他", "未分类"))) cat = comp.category || cat;
+
   if (cert) cat = "职业技能";
 
   // 级别归一：国家级C类/国际级C类 按省部级A类降档
