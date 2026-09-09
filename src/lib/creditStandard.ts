@@ -4,6 +4,8 @@
 // 匹配策略：按「大类 → 认定项目 → 成果/级别关键词 → 排名关键词」依次收敛；
 // 匹配不到返回 null（unknown），不误报。
 
+import { Catalogs, EMPTY_CATALOGS, matchCertificate, matchCompetition } from "./catalog";
+
 export type CreditCompliance = "ok" | "over" | "under" | "unknown";
 
 export interface StandardLookup {
@@ -12,6 +14,8 @@ export interface StandardLookup {
   max?: number;
   basis: string;              // 依据描述，如「学科竞赛·国家级B类·一等奖·团队负责人」
   matched: boolean;
+  catalogName?: string;       // 命中的名录条目（赛事/证书标准名称）
+  normalizedLevel?: string;   // 归一后的级别档
 }
 
 export interface LookupInput {
@@ -24,6 +28,32 @@ export interface LookupInput {
 
 const has = (s: string, ...keys: string[]) => keys.some((k) => s.includes(k));
 
+/** 级别写法归一：国家级C类 / 国际级C类 按省部级A类降档计分 */
+export function normalizeLevel(raw: string): string | null {
+  const s = (raw || "").replace(/\s|（|）|\(|\)/g, "");
+  if (!s) return null;
+  if (has(s, "国际级C", "国际C", "国家级C", "国家C")) return "省部级A类";
+  if (has(s, "国家级A", "国家A", "国际级A", "国际A")) return "国家级A类";
+  if (has(s, "国家级B", "国家B", "国际级B", "国际B")) return "国家级B类";
+  if (has(s, "国家", "全国", "国际")) return "国家级B类";
+  if (has(s, "省") || has(s, "部")) {
+    if (has(s, "B类") || /省级?B/.test(s)) return "省部级B类";
+    return "省部级A类";
+  }
+  if (has(s, "市")) return "省部级B类";
+  if (has(s, "校", "院")) return "校级";
+  return null;
+}
+
+/** 奖次归一：特等/一等/金奖→1，二等/银奖→2，三等/铜奖/优秀→3，其余 null */
+export function normalizePrize(raw: string): 1 | 2 | 3 | null {
+  const s = raw || "";
+  if (has(s, "特等", "一等", "金奖", "冠军", "第一名")) return 1;
+  if (has(s, "二等", "银奖", "亚军", "第二名")) return 2;
+  if (has(s, "三等", "铜奖", "季军", "第三名", "优秀奖", "优胜奖")) return 3;
+  return null;
+}
+
 // 排名/角色 → 档位数
 function rankSlot(rank: string, slots: { key: string[]; credit: number }[]): number | null {
   for (const s of slots) {
@@ -35,6 +65,7 @@ function rankSlot(rank: string, slots: { key: string[]; credit: number }[]): num
 const LEADER_KEYS = ["负责人", "主持人", "第一作者", "第一署名", "独立", "个人", "第一参与", "队长", "组长", "第一"];
 const FIRST_KEYS = ["第一参与", "第二", "次位"];
 const OTHER_KEYS = ["其他", "参与", "成员", "第三", "第四", "第五", "团队"];
+
 
 export function lookupStandardCredit(input: LookupInput): StandardLookup {
   const cat = input.category || "";
