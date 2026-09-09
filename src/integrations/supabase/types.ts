@@ -641,6 +641,62 @@ export type Database = {
           },
         ]
       }
+      certificate_catalog: {
+        Row: {
+          active: boolean
+          aliases: string[]
+          cert_class: string
+          college_id: string | null
+          created_at: string
+          created_by: string | null
+          default_credit: number | null
+          id: string
+          issuer: string | null
+          level: string | null
+          name: string
+          note: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          aliases?: string[]
+          cert_class?: string
+          college_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_credit?: number | null
+          id?: string
+          issuer?: string | null
+          level?: string | null
+          name: string
+          note?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          aliases?: string[]
+          cert_class?: string
+          college_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_credit?: number | null
+          id?: string
+          issuer?: string | null
+          level?: string | null
+          name?: string
+          note?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificate_catalog_college_id_fkey"
+            columns: ["college_id"]
+            isOneToOne: false
+            referencedRelation: "colleges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       certificate_types: {
         Row: {
           active: boolean
@@ -736,6 +792,59 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      competition_catalog: {
+        Row: {
+          active: boolean
+          aliases: string[]
+          category: string
+          college_id: string | null
+          created_at: string
+          created_by: string | null
+          default_credit: number | null
+          default_level: string | null
+          id: string
+          name: string
+          note: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          aliases?: string[]
+          category?: string
+          college_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_credit?: number | null
+          default_level?: string | null
+          id?: string
+          name: string
+          note?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          aliases?: string[]
+          category?: string
+          college_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_credit?: number | null
+          default_level?: string | null
+          id?: string
+          name?: string
+          note?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competition_catalog_college_id_fkey"
+            columns: ["college_id"]
+            isOneToOne: false
+            referencedRelation: "colleges"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       keywords: {
         Row: {
