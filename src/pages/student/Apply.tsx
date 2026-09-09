@@ -19,6 +19,8 @@ import { sha256Hex as sha256OfFile } from "@/lib/fileHash";
 import { randomUUID as newUuid } from "@/lib/uuid";
 import { parseApplicationForm, serializeItems, type FormItem } from "@/lib/parseForm";
 import { lookupStandardCredit, checkCreditCompliance, COMPLIANCE_LABEL } from "@/lib/creditStandard";
+import { Catalogs, EMPTY_CATALOGS, loadCatalogs } from "@/lib/catalog";
+
 import { buildAchievementFingerprint } from "@/lib/keywordFingerprint";
 
 const BUCKET = "application-files";
