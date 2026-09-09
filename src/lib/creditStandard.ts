@@ -241,11 +241,9 @@ export function lookupStandardCredit(input: LookupInput, catalogs: Catalogs = EM
 }
 
 function prizeOf(s: string): 1 | 2 | 3 | null {
-  if (has(s, "一等", "金奖", "冠军", "特等奖")) return 1;
-  if (has(s, "二等", "银奖", "亚军")) return 2;
-  if (has(s, "三等", "铜奖", "季军", "优秀奖")) return 3;
-  return null;
+  return normalizePrize(s);
 }
+
 
 function ok(credit: number, basis: string): StandardLookup {
   return { credit, basis, matched: true };
