@@ -71,6 +71,9 @@ const App = () => (
             <Route path="/admin/rules" element={<RoleRoute role="admin"><Rules /></RoleRoute>} />
             <Route path="/admin/keywords" element={<RoleRoute role="admin"><Keywords /></RoleRoute>} />
             <Route path="/admin/cases" element={<RoleRoute role="admin"><Cases /></RoleRoute>} />
+            <Route path="/admin/competitions" element={<RoleRoute role="admin"><Competitions /></RoleRoute>} />
+            <Route path="/admin/certificates" element={<RoleRoute role="admin"><CertificatesCatalog /></RoleRoute>} />
+
             <Route path="/admin/audit-logs" element={<RoleRoute role="admin"><AuditLogs /></RoleRoute>} />
             <Route path="/admin/ai-models" element={<RoleRoute role="super_admin"><AiModels /></RoleRoute>} />
             <Route path="/admin/aigc" element={<RoleRoute role="super_admin"><AigcAdmin /></RoleRoute>} />
