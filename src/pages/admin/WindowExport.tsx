@@ -1,0 +1,378 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import AppLayout from "@/components/AppLayout";
+import PageHeader from "@/components/PageHeader";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { ArrowLeft, Download, Loader2 } from "lucide-react";
+import { toastError } from "@/lib/errors";
+import { deserializeItems } from "@/lib/parseForm";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+
+const BUCKET = "application-files";
+
+const STATUS_LABEL: Record<string, string> = {
+  pending_ai: "系统核验中",
+  auto_approved: "系统初审通过",
+  pending_review: "待人工复核",
+  rejected_by_ai: "系统初审未通过",
+  approved: "已通过",
+  rejected: "已驳回",
+};
+
+type Row = {
+  id: string;
+  status: string;
+  description: string;
+  final_credit: number | null;
+  claimed_credit: number | null;
+  form_file_path: string | null;
+  submitted_at: string;
+  student_id: string;
+  student_no: string;
+  full_name: string;
+  class_name: string;
+  attachments: { file_path: string; file_name: string | null; sort_order: number }[];
+};
+
+const safe = (s: string) => (s || "").replace(/[/\\:*?"<>|\r\n]+/g, "_").trim() || "未命名";
+
+const titleOf = (description: string) => {
+  const items = deserializeItems(description);
+  const t = items.map((it) => it.achievement).filter(Boolean).slice(0, 2).join(" · ");
+  if (t) return t;
+  return description?.trim() ? description.trim().slice(0, 40) : "未命名申请";
+};
+
+const extOf = (path: string) => {
+  const m = /\.([a-zA-Z0-9]{1,6})$/.exec(path);
+  return m ? `.${m[1].toLowerCase()}` : "";
+};
+
+async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T, i: number) => Promise<R>) {
+  const out: R[] = new Array(items.length);
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (cursor < items.length) {
+      const i = cursor++;
+      out[i] = await fn(items[i], i);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
+
+export default function WindowExport() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [win, setWin] = useState<{ id: string; name: string; starts_at: string; ends_at: string; college_id: string } | null>(null);
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [classFilter, setClassFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
+
+  const load = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      const { data: w, error: we } = await supabase
+        .from("submission_windows")
+        .select("id,name,starts_at,ends_at,college_id")
+        .eq("id", id)
+        .maybeSingle();
+      if (we) throw we;
+      if (!w) {
+        toast.error("批次不存在");
+        return;
+      }
+      setWin(w);
+
+      const { data: apps, error: ae } = await supabase
+        .from("applications")
+        .select("id,status,description,final_credit,claimed_credit,form_file_path,submitted_at,student_id")
+        .eq("college_id", w.college_id)
+        .gte("submitted_at", w.starts_at)
+        .lte("submitted_at", w.ends_at)
+        .order("submitted_at", { ascending: true })
+        .limit(2000);
+      if (ae) throw ae;
+      const list = apps ?? [];
+      if (list.length === 0) {
+        setRows([]);
+        return;
+      }
+
+      const studentIds = Array.from(new Set(list.map((a) => a.student_id)));
+      const appIds = list.map((a) => a.id);
+
+      const [{ data: profiles }, { data: atts }] = await Promise.all([
+        supabase.from("profiles").select("user_id,full_name,student_no,class_name").in("user_id", studentIds),
+        supabase
+          .from("application_attachments")
+          .select("application_id,file_path,file_name,sort_order")
+          .in("application_id", appIds)
+          .order("sort_order", { ascending: true }),
+      ]);
+
+      const pMap = new Map((profiles ?? []).map((p) => [p.user_id, p]));
+      const aMap = new Map<string, Row["attachments"]>();
+      for (const a of atts ?? []) {
+        const arr = aMap.get(a.application_id) ?? [];
+        arr.push({ file_path: a.file_path, file_name: a.file_name, sort_order: a.sort_order ?? 0 });
+        aMap.set(a.application_id, arr);
+      }
+
+      const merged: Row[] = list.map((a) => {
+        const p = pMap.get(a.student_id);
+        return {
+          ...a,
+          student_no: p?.student_no ?? "",
+          full_name: p?.full_name ?? "未知学生",
+          class_name: p?.class_name ?? "",
+          attachments: aMap.get(a.id) ?? [],
+        };
+      });
+      setRows(merged);
+      setSelected(new Set(merged.map((r) => r.id)));
+    } catch (e) {
+      toastError(e, "加载失败");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const classes = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.class_name || "未分班"))).sort((a, b) => a.localeCompare(b, "zh-CN")),
+    [rows],
+  );
+
+  const filtered = useMemo(() => {
+    const kw = search.trim().toLowerCase();
+    return rows.filter((r) => {
+      if (classFilter !== "all" && (r.class_name || "未分班") !== classFilter) return false;
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (kw && !`${r.student_no} ${r.full_name} ${titleOf(r.description)}`.toLowerCase().includes(kw)) return false;
+      return true;
+    });
+  }, [rows, classFilter, statusFilter, search]);
+
+  const allChecked = filtered.length > 0 && filtered.every((r) => selected.has(r.id));
+
+  const toggleAll = () => {
+    const next = new Set(selected);
+    if (allChecked) filtered.forEach((r) => next.delete(r.id));
+    else filtered.forEach((r) => next.add(r.id));
+    setSelected(next);
+  };
+
+  const toggleOne = (rid: string) => {
+    const next = new Set(selected);
+    if (next.has(rid)) next.delete(rid);
+    else next.add(rid);
+    setSelected(next);
+  };
+
+  const fetchFile = async (path: string) => {
+    const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) throw error ?? new Error("签名失败");
+    const res = await fetch(data.signedUrl);
+    if (!res.ok) throw new Error(`下载失败 ${res.status}`);
+    return await res.blob();
+  };
+
+  const doExport = async () => {
+    if (!win) return;
+    const targets = rows.filter((r) => selected.has(r.id));
+    if (targets.length === 0) return toast.error("请先勾选要导出的学生");
+
+    const tasks: { folder: string; name: string; path: string; who: string }[] = [];
+    const usedNames = new Map<string, number>();
+    const perStudentSeq = new Map<string, number>();
+
+    for (const r of targets) {
+      const cls = safe(r.class_name || "未分班");
+      const person = safe(`${r.student_no || "无学号"}-${r.full_name}`);
+      const folder = `${cls}/${person}`;
+      const seq = (perStudentSeq.get(folder) ?? 0) + 1;
+      perStudentSeq.set(folder, seq);
+      const suffix = seq > 1 ? `(${seq})` : "";
+
+      if (r.form_file_path) {
+        tasks.push({
+          folder,
+          name: `申请表${suffix}${extOf(r.form_file_path) || ".xlsx"}`,
+          path: r.form_file_path,
+          who: `${r.full_name} 的申请表`,
+        });
+      }
+      r.attachments.forEach((a, i) => {
+        const key = `${folder}/佐证`;
+        const n = (usedNames.get(key) ?? 0) + 1;
+        usedNames.set(key, n);
+        tasks.push({
+          folder,
+          name: `佐证材料${n}${extOf(a.file_name || a.file_path)}`,
+          path: a.file_path,
+          who: `${r.full_name} 的佐证材料${i + 1}`,
+        });
+      });
+    }
+
+    if (tasks.length === 0) return toast.error("所选申请没有可导出的文件");
+    if (tasks.length > 400) toast.info("材料较多，导出可能需要几分钟，建议按班级分批导出");
+
+    setExporting(true);
+    setProgress({ done: 0, total: tasks.length });
+    const zip = new JSZip();
+    const root = zip.folder(safe(win.name))!;
+    const failures: string[] = [];
+    let done = 0;
+
+    try {
+      await mapLimit(tasks, 4, async (t) => {
+        try {
+          const blob = await fetchFile(t.path);
+          root.file(`${t.folder}/${t.name}`, blob);
+        } catch {
+          failures.push(t.who);
+        } finally {
+          done += 1;
+          setProgress({ done, total: tasks.length });
+        }
+      });
+
+      const out = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+      saveAs(out, `${safe(win.name)}-学生材料.zip`);
+
+      if (failures.length > 0) {
+        toast.warning(`导出完成，但有 ${failures.length} 个文件缺失：${failures.slice(0, 5).join("、")}${failures.length > 5 ? " 等" : ""}`);
+      } else {
+        toast.success(`导出完成，共 ${tasks.length} 个文件`);
+      }
+    } catch (e) {
+      toastError(e, "导出失败");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <PageHeader
+          title="导出学生材料"
+          description={win ? `批次：${win.name}（${new Date(win.starts_at).toLocaleString("zh-CN", { hour12: false })} — ${new Date(win.ends_at).toLocaleString("zh-CN", { hour12: false })}）` : "加载中…"}
+          actions={
+            <div className="flex gap-2">
+              <Button variant="ghost" onClick={() => navigate("/admin/submission-windows")}>
+                <ArrowLeft className="mr-1 h-4 w-4" />返回
+              </Button>
+              <Button variant="solid" onClick={doExport} disabled={exporting || selected.size === 0}>
+                {exporting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />}
+                {exporting ? "打包中…" : `导出所选（${selected.size}）`}
+              </Button>
+            </div>
+          }
+        />
+
+        {exporting && (
+          <Card>
+            <CardContent className="space-y-2 py-4">
+              <div className="text-sm text-muted-foreground">
+                已打包 {progress.done} / {progress.total} 个文件，请勿关闭页面
+              </div>
+              <Progress value={progress.total ? (progress.done / progress.total) * 100 : 0} />
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>本批次申请（{filtered.length} 条）</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="搜索学号 / 姓名 / 项目"
+                className="w-[240px]"
+              />
+              <Select value={classFilter} onValueChange={setClassFilter}>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="全部班级" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部班级</SelectItem>
+                  {classes.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px]"><SelectValue placeholder="全部状态" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部状态</SelectItem>
+                  {Object.entries(STATUS_LABEL).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button variant="ghost" onClick={toggleAll} disabled={filtered.length === 0}>
+                {allChecked ? "取消全选" : "全选当前筛选"}
+              </Button>
+            </div>
+
+            {loading ? (
+              <div className="py-10 text-center text-muted-foreground">加载中…</div>
+            ) : filtered.length === 0 ? (
+              <div className="py-10 text-center text-muted-foreground">该批次内暂无申请</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10"></TableHead>
+                    <TableHead>学号</TableHead>
+                    <TableHead>姓名</TableHead>
+                    <TableHead>班级</TableHead>
+                    <TableHead>项目</TableHead>
+                    <TableHead>学分</TableHead>
+                    <TableHead>状态</TableHead>
+                    <TableHead>文件</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell>
+                        <Checkbox checked={selected.has(r.id)} onCheckedChange={() => toggleOne(r.id)} aria-label="选择" />
+                      </TableCell>
+                      <TableCell className="text-sm">{r.student_no || "—"}</TableCell>
+                      <TableCell className="text-sm font-medium">{r.full_name}</TableCell>
+                      <TableCell className="text-sm">{r.class_name || "未分班"}</TableCell>
+                      <TableCell className="max-w-[260px] truncate text-sm">{titleOf(r.description)}</TableCell>
+                      <TableCell className="text-sm">{r.final_credit ?? r.claimed_credit ?? "—"}</TableCell>
+                      <TableCell><Badge variant="outline">{STATUS_LABEL[r.status] ?? r.status}</Badge></TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {(r.form_file_path ? 1 : 0) + r.attachments.length} 个
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
