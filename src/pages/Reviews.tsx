@@ -163,12 +163,19 @@ const ReviewsList = () => {
           title="申请审核"
           description="按状态筛选并处理学分申请"
           actions={
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="搜索学生姓名/学号"
-              className="w-56"
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="搜索学生姓名/学号"
+                className="w-56"
+              />
+              {latestWindowId && (
+                <Button variant="outline" onClick={() => navigate(`/admin/windows/${latestWindowId}/export`)}>
+                  导出学生材料
+                </Button>
+              )}
+            </div>
           }
         />
         <Tabs value={tab} onValueChange={setTab}>
