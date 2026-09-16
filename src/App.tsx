@@ -44,6 +44,7 @@ import Branding from "./pages/admin/Branding.tsx";
 import SubmissionWindows from "./pages/admin/SubmissionWindows.tsx";
 import WindowReport from "./pages/admin/WindowReport.tsx";
 import WindowExport from "./pages/admin/WindowExport.tsx";
+import Exports from "./pages/Exports.tsx";
 import SuperColleges from "./pages/super/Colleges.tsx";
 import SuperAdmins from "./pages/super/Admins.tsx";
 
@@ -82,6 +83,7 @@ const App = () => (
             <Route path="/admin/branding" element={<RoleRoute role="admin"><Branding /></RoleRoute>} />
             <Route path="/admin/submission-windows" element={<RoleRoute role={["admin", "super_admin"]}><SubmissionWindows /></RoleRoute>} />
             <Route path="/admin/window-report/:windowId" element={<RoleRoute role={["admin", "super_admin"]}><WindowReport /></RoleRoute>} />
+            <Route path="/exports" element={<RoleRoute role={["teacher", "admin", "super_admin"]}><Exports /></RoleRoute>} />
             <Route path="/admin/windows/:id/export" element={<RoleRoute role={["teacher", "admin", "super_admin"]}><WindowExport /></RoleRoute>} />
             <Route path="/super/colleges" element={<RoleRoute role="super_admin"><SuperColleges /></RoleRoute>} />
             <Route path="/super/admins" element={<RoleRoute role="super_admin"><SuperAdmins /></RoleRoute>} />
