@@ -13,7 +13,7 @@ import StaffAiAssistant from "@/components/StaffAiAssistant";
 import {
   LayoutDashboard, Upload, BookOpen, ClipboardCheck, FileText, Library, LogOut,
   Users, BarChart3, Trophy, UserCog, Inbox, Send, ScrollText, Tags, History, Cpu, IdCard, GraduationCap,
-  Activity, Palette, Building2, Shield, CalendarRange, ScanEye,
+  Activity, Palette, Building2, Shield, CalendarRange, ScanEye, FolderArchive,
 } from "lucide-react";
 
 type Item = { title: string; url: string; icon: typeof LayoutDashboard };
@@ -36,6 +36,7 @@ const adminItems: Item[] = [
   { title: "审计日志", url: "/admin/audit-logs", icon: ScrollText },
   { title: "学院界面风格", url: "/admin/branding", icon: Palette },
   { title: "提交时间窗口", url: "/admin/submission-windows", icon: CalendarRange },
+  { title: "材料导出", url: "/exports", icon: FolderArchive },
   { title: "实时一致性", url: "/diagnostics/realtime", icon: Activity },
 ];
 
@@ -60,6 +61,7 @@ const superAdminItems: Item[] = [
   { title: "AIGC 图像鉴别", url: "/admin/aigc", icon: ScanEye },
   { title: "审计日志", url: "/admin/audit-logs", icon: ScrollText },
   { title: "提交时间窗口", url: "/admin/submission-windows", icon: CalendarRange },
+  { title: "材料导出", url: "/exports", icon: FolderArchive },
   { title: "实时一致性", url: "/diagnostics/realtime", icon: Activity },
 ];
 
@@ -70,6 +72,7 @@ const teacherItems: Item[] = [
   { title: "学分排名", url: "/teacher/credits", icon: Trophy },
   { title: "班级学分", url: "/teacher/classes", icon: GraduationCap },
   { title: "学生管理", url: "/teacher/students", icon: Users },
+  { title: "材料导出", url: "/exports", icon: FolderArchive },
   { title: "实时一致性", url: "/diagnostics/realtime", icon: Activity },
 ];
 
