@@ -58,6 +58,18 @@ const ReviewsList = () => {
   const [tab, setTab] = useState(initial);
   const [reviewCounts, setReviewCounts] = useState<Map<string, number>>(new Map());
   const [page, setPage] = useState(0);
+  const [latestWindowId, setLatestWindowId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      let q = supabase.from("submission_windows").select("id").order("starts_at", { ascending: false }).limit(1);
+      if (collegeId) q = q.eq("college_id", collegeId);
+      const { data } = await q;
+      if (!cancelled) setLatestWindowId(data?.[0]?.id ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [collegeId]);
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [sourceFilter, setSourceFilter] = useState<"all" | "ai_uncertain" | "student_appeal">("all");
