@@ -12,7 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RotateCcw, X } from "lucide-react";
 import { toastError } from "@/lib/errors";
 import { deserializeItems } from "@/lib/parseForm";
 import { runZipExport, checkStorageReachable, ExportAborted, type ExportTask, type ExportProgress } from "@/lib/zipExport";
