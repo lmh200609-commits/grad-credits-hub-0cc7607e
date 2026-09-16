@@ -57,6 +57,13 @@ const extOf = (path: string) => {
   return m ? `.${m[1].toLowerCase()}` : "";
 };
 
+const fmtDuration = (ms: number) => {
+  const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 60) return `${s} 秒`;
+  const m = Math.floor(s / 60);
+  return `${m} 分 ${s % 60} 秒`;
+};
+
 async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T, i: number) => Promise<R>) {
   const out: R[] = new Array(items.length);
   let cursor = 0;
