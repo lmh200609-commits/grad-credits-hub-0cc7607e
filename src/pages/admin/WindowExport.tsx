@@ -187,20 +187,8 @@ export default function WindowExport() {
     setSelected(next);
   };
 
-  const fetchFile = async (path: string) => {
-    const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
-    if (error || !data?.signedUrl) throw error ?? new Error("签名失败");
-    const res = await fetch(data.signedUrl);
-    if (!res.ok) throw new Error(`下载失败 ${res.status}`);
-    return await res.blob();
-  };
-
-  const doExport = async () => {
-    if (!win) return;
-    const targets = rows.filter((r) => selected.has(r.id));
-    if (targets.length === 0) return toast.error("请先勾选要导出的学生");
-
-    const tasks: { folder: string; name: string; path: string; who: string }[] = [];
+  const buildTasks = (targets: Row[]): ExportTask[] => {
+    const tasks: ExportTask[] = [];
     const usedNames = new Map<string, number>();
     const perStudentSeq = new Map<string, number>();
 
@@ -215,6 +203,7 @@ export default function WindowExport() {
       if (r.form_file_path) {
         tasks.push({
           folder,
+          group: folder,
           name: `申请表${suffix}${extOf(r.form_file_path) || ".xlsx"}`,
           path: r.form_file_path,
           who: `${r.full_name} 的申请表`,
@@ -226,50 +215,64 @@ export default function WindowExport() {
         usedNames.set(key, n);
         tasks.push({
           folder,
+          group: folder,
           name: `佐证材料${n}${extOf(a.file_name || a.file_path)}`,
           path: a.file_path,
           who: `${r.full_name} 的佐证材料${i + 1}`,
         });
       });
     }
+    return tasks;
+  };
 
+  const runTasks = async (tasks: ExportTask[]) => {
+    if (!win) return;
     if (tasks.length === 0) return toast.error("所选申请没有可导出的文件");
-    if (tasks.length > 400) toast.info("材料较多，导出可能需要几分钟，建议按班级分批导出");
 
+    const ok = await checkStorageReachable(BUCKET, tasks[0].path);
+    if (!ok) {
+      toast.error("文件服务在当前网络下不可访问，请检查校内地址配置后重试");
+      return;
+    }
+
+    const ac = new AbortController();
+    abortRef.current = ac;
     setExporting(true);
-    setProgress({ done: 0, total: tasks.length });
-    const zip = new JSZip();
-    const root = zip.folder(safe(win.name))!;
-    const failures: string[] = [];
-    let done = 0;
+    setFailed([]);
+    setProgress({ volume: 1, done: 0, total: tasks.length, elapsedMs: 0, etaMs: null });
 
     try {
-      await mapLimit(tasks, 4, async (t) => {
-        try {
-          const blob = await fetchFile(t.path);
-          root.file(`${t.folder}/${t.name}`, blob);
-        } catch {
-          failures.push(t.who);
-        } finally {
-          done += 1;
-          setProgress({ done, total: tasks.length });
-        }
+      const res = await runZipExport({
+        bucket: BUCKET,
+        rootName: safe(win.name),
+        tasks,
+        signal: ac.signal,
+        onProgress: setProgress,
       });
-
-      const out = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
-      saveAs(out, `${safe(win.name)}-学生材料.zip`);
-
-      if (failures.length > 0) {
-        toast.warning(`导出完成，但有 ${failures.length} 个文件缺失：${failures.slice(0, 5).join("、")}${failures.length > 5 ? " 等" : ""}`);
+      setFailed(res.failures);
+      if (res.failures.length > 0) {
+        toast.warning(`导出完成，${res.failures.length} 个文件未能下载，可点击「只重试失败项」`);
       } else {
-        toast.success(`导出完成，共 ${tasks.length} 个文件`);
+        toast.success(`导出完成，共 ${res.exported} 个文件${res.volumes > 1 ? `，分 ${res.volumes} 卷` : ""}`);
       }
     } catch (e) {
-      toastError(e, "导出失败");
+      if (e instanceof ExportAborted) toast.info("已停止导出");
+      else toastError(e, "导出失败");
     } finally {
+      abortRef.current = null;
       setExporting(false);
     }
   };
+
+  const doExport = async () => {
+    const targets = rows.filter((r) => selected.has(r.id));
+    if (targets.length === 0) return toast.error("请先勾选要导出的学生");
+    const tasks = buildTasks(targets);
+    if (tasks.length > 400) toast.info("材料较多，导出会自动分卷，请保持页面打开");
+    await runTasks(tasks);
+  };
+
+  const retryFailed = () => void runTasks(failed);
 
   return (
     <AppLayout>
