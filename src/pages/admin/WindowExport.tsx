@@ -298,6 +298,16 @@ export default function WindowExport() {
               <Button variant="ghost" onClick={() => navigate("/admin/submission-windows")}>
                 <ArrowLeft className="mr-1 h-4 w-4" />返回
               </Button>
+              {exporting ? (
+                <Button variant="outline" onClick={() => abortRef.current?.abort()}>
+                  <X className="mr-1 h-4 w-4" />停止导出
+                </Button>
+              ) : null}
+              {!exporting && failed.length > 0 ? (
+                <Button variant="outline" onClick={retryFailed}>
+                  <RotateCcw className="mr-1 h-4 w-4" />只重试失败项（{failed.length}）
+                </Button>
+              ) : null}
               <Button variant="solid" onClick={doExport} disabled={exporting || selected.size === 0}>
                 {exporting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />}
                 {exporting ? "打包中…" : `导出所选（${selected.size}）`}
@@ -310,9 +320,24 @@ export default function WindowExport() {
           <Card>
             <CardContent className="space-y-2 py-4">
               <div className="text-sm text-muted-foreground">
-                已打包 {progress.done} / {progress.total} 个文件，请勿关闭页面
+                第 {progress.volume} 卷 · 已打包 {progress.done} / {progress.total} 个文件 · 已用时 {fmtDuration(progress.elapsedMs)}
+                {progress.etaMs !== null ? ` · 预计还需 ${fmtDuration(progress.etaMs)}` : ""}，请勿关闭页面
               </div>
               <Progress value={progress.total ? (progress.done / progress.total) * 100 : 0} />
+            </CardContent>
+          </Card>
+        )}
+
+        {!exporting && failed.length > 0 && (
+          <Card>
+            <CardContent className="space-y-1 py-4 text-sm">
+              <div className="font-medium text-destructive">以下 {failed.length} 个文件未能下载</div>
+              <ul className="list-disc pl-5 text-muted-foreground">
+                {failed.slice(0, 10).map((f) => (
+                  <li key={`${f.folder}/${f.name}`}>{f.who}</li>
+                ))}
+                {failed.length > 10 ? <li>等共 {failed.length} 个</li> : null}
+              </ul>
             </CardContent>
           </Card>
         )}
