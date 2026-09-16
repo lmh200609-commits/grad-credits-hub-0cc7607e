@@ -199,10 +199,6 @@ const ApplicationDetail = () => {
   const displayFinalCredit = (s: any, c: number | null) =>
     s === "rejected" || s === "rejected_by_ai" ? 0 : c;
 
-  const studentShortReason =
-    app?.ai_reasoning_short?.trim() ||
-    (app?.ai_reasoning ? app.ai_reasoning.slice(0, 60) + (app.ai_reasoning.length > 60 ? "…" : "") : "");
-
   const decide = async (decision: "approved" | "rejected") => {
     if (!app) return;
     if (submitting) return;
@@ -714,36 +710,7 @@ const ApplicationDetail = () => {
           </CardContent>
         </Card>
 
-        {/* 学生视角：系统未通过简短结论 + 申请人工复核 */}
-        {!isReviewer &&
-          (app.status === "rejected_by_ai" ||
-            (app.status === "pending_review" && manualReviewCount === 0)) && (
-          <Card className="border-destructive">
-            <CardHeader>
-              <CardTitle className="text-base text-destructive">系统未通过</CardTitle>
-              <CardDescription>
-                {app.status === "pending_review"
-                  ? "你已申请人工复核，正在等待教师处理"
-                  : "若你认为材料没有问题，可申请教师人工复核"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="rounded bg-destructive/10 p-3 text-sm">
-                {studentShortReason || "材料未通过系统核验。"}
-              </p>
-              <Button
-                onClick={requestManualReview}
-                variant="outline"
-                disabled={submitting || app.status === "pending_review"}
-                title={app.status === "pending_review" ? "本轮人工复核已提交，请等待教师处理" : undefined}
-              >
-                {submitting ? "处理中…" : (app.status === "pending_review" ? "已提交人工复核，等待教师处理" : "申请人工复核")}
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* 学生视角：教师已复核且学生仍有异议时申请二次复核 */}
+        {/* 学生视角：教师已核对且学生仍有异议时申请再次核对 */}
         {!isReviewer &&
           (app.status === "approved" ||
             app.status === "rejected" ||
@@ -754,8 +721,8 @@ const ApplicationDetail = () => {
               <CardTitle className="text-base">仍有异议？</CardTitle>
               <CardDescription>
                 {app.status === "pending_review"
-                  ? `你已申请第 ${reReviewIndex} 次人工复核，正在等待教师处理`
-                  : "你可以申请二次人工复核，教师将再次审阅"}
+                  ? `你已申请第 ${reReviewIndex} 次核对，正在等待教师处理`
+                  : "你可以申请再次核对，教师将重新审阅"}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -763,13 +730,13 @@ const ApplicationDetail = () => {
                 onClick={requestManualReview}
                 variant="outline"
                 disabled={submitting || app.status === "pending_review"}
-                title={app.status === "pending_review" ? "本轮人工复核已提交，请等待教师处理" : undefined}
+                title={app.status === "pending_review" ? "本轮核对已提交，请等待教师处理" : undefined}
               >
                 {submitting
                   ? "处理中…"
                   : (app.status === "pending_review"
-                    ? "已提交人工复核，等待教师处理"
-                    : "申请二次人工复核")}
+                    ? "已提交核对，等待教师处理"
+                    : "申请再次核对")}
               </Button>
             </CardContent>
           </Card>

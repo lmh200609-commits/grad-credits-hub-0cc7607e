@@ -22,7 +22,7 @@ const STAFF_MAP: Record<Status, { label: string; className: string }> = {
 // 学生侧脱敏：所有尚未由教师最终确认的状态统一显示为「待核对」。
 const STUDENT_MAP: Record<Status, { label: string; className: string }> = {
   pending_ai: { label: "待核对", className: "bg-warning/15 text-warning border-transparent" },
-  auto_approved: { label: "已通过", className: "bg-success text-success-foreground border-transparent" },
+  auto_approved: { label: "待核对", className: "bg-warning/15 text-warning border-transparent" },
   pending_review: { label: "待核对", className: "bg-warning/15 text-warning border-transparent" },
   rejected_by_ai: { label: "待核对", className: "bg-warning/15 text-warning border-transparent" },
   approved: { label: "已通过", className: "bg-success text-success-foreground border-transparent" },
