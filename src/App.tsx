@@ -43,6 +43,7 @@ import PurgeAndBootstrap from "./pages/admin/PurgeAndBootstrap.tsx";
 import Branding from "./pages/admin/Branding.tsx";
 import SubmissionWindows from "./pages/admin/SubmissionWindows.tsx";
 import WindowReport from "./pages/admin/WindowReport.tsx";
+import WindowExport from "./pages/admin/WindowExport.tsx";
 import SuperColleges from "./pages/super/Colleges.tsx";
 import SuperAdmins from "./pages/super/Admins.tsx";
 
