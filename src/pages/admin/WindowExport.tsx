@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import PageHeader from "@/components/PageHeader";
@@ -12,11 +12,10 @@ import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Loader2, RotateCcw, X } from "lucide-react";
 import { toastError } from "@/lib/errors";
 import { deserializeItems } from "@/lib/parseForm";
-import JSZip from "jszip";
-import { saveAs } from "file-saver";
+import { runZipExport, checkStorageReachable, ExportAborted, type ExportTask, type ExportProgress } from "@/lib/zipExport";
 
 const BUCKET = "application-files";
 
@@ -58,18 +57,13 @@ const extOf = (path: string) => {
   return m ? `.${m[1].toLowerCase()}` : "";
 };
 
-async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T, i: number) => Promise<R>) {
-  const out: R[] = new Array(items.length);
-  let cursor = 0;
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (cursor < items.length) {
-      const i = cursor++;
-      out[i] = await fn(items[i], i);
-    }
-  });
-  await Promise.all(workers);
-  return out;
-}
+const fmtDuration = (ms: number) => {
+  const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 60) return `${s} 秒`;
+  const m = Math.floor(s / 60);
+  return `${m} 分 ${s % 60} 秒`;
+};
+
 
 export default function WindowExport() {
   const { id } = useParams<{ id: string }>();
@@ -82,7 +76,21 @@ export default function WindowExport() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [exporting, setExporting] = useState(false);
-  const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [progress, setProgress] = useState<ExportProgress>({ volume: 1, done: 0, total: 0, elapsedMs: 0, etaMs: null });
+  const [failed, setFailed] = useState<ExportTask[]>([]);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!exporting) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [exporting]);
+
+
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -187,20 +195,8 @@ export default function WindowExport() {
     setSelected(next);
   };
 
-  const fetchFile = async (path: string) => {
-    const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
-    if (error || !data?.signedUrl) throw error ?? new Error("签名失败");
-    const res = await fetch(data.signedUrl);
-    if (!res.ok) throw new Error(`下载失败 ${res.status}`);
-    return await res.blob();
-  };
-
-  const doExport = async () => {
-    if (!win) return;
-    const targets = rows.filter((r) => selected.has(r.id));
-    if (targets.length === 0) return toast.error("请先勾选要导出的学生");
-
-    const tasks: { folder: string; name: string; path: string; who: string }[] = [];
+  const buildTasks = (targets: Row[]): ExportTask[] => {
+    const tasks: ExportTask[] = [];
     const usedNames = new Map<string, number>();
     const perStudentSeq = new Map<string, number>();
 
@@ -215,6 +211,7 @@ export default function WindowExport() {
       if (r.form_file_path) {
         tasks.push({
           folder,
+          group: folder,
           name: `申请表${suffix}${extOf(r.form_file_path) || ".xlsx"}`,
           path: r.form_file_path,
           who: `${r.full_name} 的申请表`,
@@ -226,50 +223,64 @@ export default function WindowExport() {
         usedNames.set(key, n);
         tasks.push({
           folder,
+          group: folder,
           name: `佐证材料${n}${extOf(a.file_name || a.file_path)}`,
           path: a.file_path,
           who: `${r.full_name} 的佐证材料${i + 1}`,
         });
       });
     }
+    return tasks;
+  };
 
+  const runTasks = async (tasks: ExportTask[]) => {
+    if (!win) return;
     if (tasks.length === 0) return toast.error("所选申请没有可导出的文件");
-    if (tasks.length > 400) toast.info("材料较多，导出可能需要几分钟，建议按班级分批导出");
 
+    const ok = await checkStorageReachable(BUCKET, tasks[0].path);
+    if (!ok) {
+      toast.error("文件服务在当前网络下不可访问，请检查校内地址配置后重试");
+      return;
+    }
+
+    const ac = new AbortController();
+    abortRef.current = ac;
     setExporting(true);
-    setProgress({ done: 0, total: tasks.length });
-    const zip = new JSZip();
-    const root = zip.folder(safe(win.name))!;
-    const failures: string[] = [];
-    let done = 0;
+    setFailed([]);
+    setProgress({ volume: 1, done: 0, total: tasks.length, elapsedMs: 0, etaMs: null });
 
     try {
-      await mapLimit(tasks, 4, async (t) => {
-        try {
-          const blob = await fetchFile(t.path);
-          root.file(`${t.folder}/${t.name}`, blob);
-        } catch {
-          failures.push(t.who);
-        } finally {
-          done += 1;
-          setProgress({ done, total: tasks.length });
-        }
+      const res = await runZipExport({
+        bucket: BUCKET,
+        rootName: safe(win.name),
+        tasks,
+        signal: ac.signal,
+        onProgress: setProgress,
       });
-
-      const out = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
-      saveAs(out, `${safe(win.name)}-学生材料.zip`);
-
-      if (failures.length > 0) {
-        toast.warning(`导出完成，但有 ${failures.length} 个文件缺失：${failures.slice(0, 5).join("、")}${failures.length > 5 ? " 等" : ""}`);
+      setFailed(res.failures);
+      if (res.failures.length > 0) {
+        toast.warning(`导出完成，${res.failures.length} 个文件未能下载，可点击「只重试失败项」`);
       } else {
-        toast.success(`导出完成，共 ${tasks.length} 个文件`);
+        toast.success(`导出完成，共 ${res.exported} 个文件${res.volumes > 1 ? `，分 ${res.volumes} 卷` : ""}`);
       }
     } catch (e) {
-      toastError(e, "导出失败");
+      if (e instanceof ExportAborted) toast.info("已停止导出");
+      else toastError(e, "导出失败");
     } finally {
+      abortRef.current = null;
       setExporting(false);
     }
   };
+
+  const doExport = async () => {
+    const targets = rows.filter((r) => selected.has(r.id));
+    if (targets.length === 0) return toast.error("请先勾选要导出的学生");
+    const tasks = buildTasks(targets);
+    if (tasks.length > 400) toast.info("材料较多，导出会自动分卷，请保持页面打开");
+    await runTasks(tasks);
+  };
+
+  const retryFailed = () => void runTasks(failed);
 
   return (
     <AppLayout>
@@ -282,6 +293,16 @@ export default function WindowExport() {
               <Button variant="ghost" onClick={() => navigate("/admin/submission-windows")}>
                 <ArrowLeft className="mr-1 h-4 w-4" />返回
               </Button>
+              {exporting ? (
+                <Button variant="outline" onClick={() => abortRef.current?.abort()}>
+                  <X className="mr-1 h-4 w-4" />停止导出
+                </Button>
+              ) : null}
+              {!exporting && failed.length > 0 ? (
+                <Button variant="outline" onClick={retryFailed}>
+                  <RotateCcw className="mr-1 h-4 w-4" />只重试失败项（{failed.length}）
+                </Button>
+              ) : null}
               <Button variant="solid" onClick={doExport} disabled={exporting || selected.size === 0}>
                 {exporting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />}
                 {exporting ? "打包中…" : `导出所选（${selected.size}）`}
@@ -294,9 +315,24 @@ export default function WindowExport() {
           <Card>
             <CardContent className="space-y-2 py-4">
               <div className="text-sm text-muted-foreground">
-                已打包 {progress.done} / {progress.total} 个文件，请勿关闭页面
+                第 {progress.volume} 卷 · 已打包 {progress.done} / {progress.total} 个文件 · 已用时 {fmtDuration(progress.elapsedMs)}
+                {progress.etaMs !== null ? ` · 预计还需 ${fmtDuration(progress.etaMs)}` : ""}，请勿关闭页面
               </div>
               <Progress value={progress.total ? (progress.done / progress.total) * 100 : 0} />
+            </CardContent>
+          </Card>
+        )}
+
+        {!exporting && failed.length > 0 && (
+          <Card>
+            <CardContent className="space-y-1 py-4 text-sm">
+              <div className="font-medium text-destructive">以下 {failed.length} 个文件未能下载</div>
+              <ul className="list-disc pl-5 text-muted-foreground">
+                {failed.slice(0, 10).map((f) => (
+                  <li key={`${f.folder}/${f.name}`}>{f.who}</li>
+                ))}
+                {failed.length > 10 ? <li>等共 {failed.length} 个</li> : null}
+              </ul>
             </CardContent>
           </Card>
         )}
