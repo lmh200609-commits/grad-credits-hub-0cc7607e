@@ -64,18 +64,6 @@ const fmtDuration = (ms: number) => {
   return `${m} 分 ${s % 60} 秒`;
 };
 
-async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T, i: number) => Promise<R>) {
-  const out: R[] = new Array(items.length);
-  let cursor = 0;
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (cursor < items.length) {
-      const i = cursor++;
-      out[i] = await fn(items[i], i);
-    }
-  });
-  await Promise.all(workers);
-  return out;
-}
 
 export default function WindowExport() {
   const { id } = useParams<{ id: string }>();
