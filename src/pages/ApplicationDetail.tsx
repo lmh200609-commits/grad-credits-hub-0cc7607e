@@ -24,7 +24,6 @@ import CertificatePreview, { CertificateData } from "@/components/CertificatePre
 import { exportElementToPdf, makeQrDataUrl, urlToDataUrl } from "@/lib/certificate";
 import FaceMatchAlert from "@/components/FaceMatchAlert";
 import AigcDetectAlert from "@/components/AigcDetectAlert";
-import StudentAigcWarning from "@/components/StudentAigcWarning";
 import { createPortal } from "react-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -615,14 +614,6 @@ const ApplicationDetail = () => {
           visible={isReviewer}
           onRefreshed={load}
         />
-
-        {!isReviewer && app.student_id === user?.id && (
-          <StudentAigcWarning
-            status={app.aigc_status}
-            score={app.aigc_score ?? null}
-            checkedAt={app.aigc_checked_at ?? null}
-          />
-        )}
 
         <FaceMatchAlert
           applicationId={app.id}

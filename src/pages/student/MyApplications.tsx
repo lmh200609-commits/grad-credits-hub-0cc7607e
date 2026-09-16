@@ -11,9 +11,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import EmptyState from "@/components/EmptyState";
 import TableSkeleton from "@/components/TableSkeleton";
-import { Clock, Lock, ShieldAlert } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { Clock, Lock } from "lucide-react";
 import { deserializeItems } from "@/lib/parseForm";
 
 type Row = {
@@ -25,8 +23,6 @@ type Row = {
   submitted_at: string;
   selected_keywords: string[] | null;
   custom_keywords: string[] | null;
-  aigc_status: "pending" | "real" | "suspect" | "fake" | "skipped" | "error" | null;
-  aigc_score: number | null;
   rules: { name: string } | null;
 };
 
@@ -74,7 +70,7 @@ const MyApplications = () => {
     setLoading(true);
     const { data } = await supabase
       .from("applications")
-      .select("id, description, status, ai_suggested_credit, final_credit, submitted_at, selected_keywords, custom_keywords, aigc_status, aigc_score, rules:ai_matched_rule_id(name)")
+      .select("id, description, status, ai_suggested_credit, final_credit, submitted_at, selected_keywords, custom_keywords, rules:ai_matched_rule_id(name)")
       .eq("student_id", user.id)
       .order("submitted_at", { ascending: false });
     setRows((data as any[]) ?? []);
@@ -117,16 +113,6 @@ const MyApplications = () => {
     return r.final_credit ?? "—";
   };
 
-  const flaggedRows = rows.filter((r) => r.aigc_status === "fake" || r.aigc_status === "suspect");
-  const fakeCount = flaggedRows.filter((r) => r.aigc_status === "fake").length;
-  const suspectCount = flaggedRows.filter((r) => r.aigc_status === "suspect").length;
-  // 概率最高的一条（按 aigc_score 降序，未知概率视为 0）
-  const topFlagged = flaggedRows
-    .slice()
-    .sort((a, b) => (b.aigc_score ?? 0) - (a.aigc_score ?? 0))[0];
-  const topPct =
-    typeof topFlagged?.aigc_score === "number" ? (topFlagged.aigc_score * 100).toFixed(1) : null;
-
   return (
     <AppLayout>
       <div className="space-y-4">
@@ -134,36 +120,6 @@ const MyApplications = () => {
           <h1 className="text-2xl font-bold">我的申请</h1>
           <Button size="sm" onClick={() => navigate("/apply")}>新申请</Button>
         </div>
-        {flaggedRows.length > 0 && (
-          <div className="rounded-md border-l-4 border-l-destructive bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-              <ShieldAlert className="h-4 w-4 shrink-0" />
-              <span className="font-medium">
-                检测到 {flaggedRows.length} 条申请的图片疑似 AI 生成
-              </span>
-              <span className="text-xs opacity-80">
-                {fakeCount > 0 && <>高风险 {fakeCount} 条</>}
-                {fakeCount > 0 && suspectCount > 0 && <> · </>}
-                {suspectCount > 0 && <>嫌疑 {suspectCount} 条</>}
-              </span>
-              {topPct && topFlagged && (
-                <span className="text-xs opacity-80">
-                  · 最高概率 <span className="font-semibold">{topPct}%</span>（{getAppTitle(topFlagged)}）
-                </span>
-              )}
-              {topFlagged && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="ml-auto h-7 px-2 text-destructive hover:bg-destructive/15 hover:text-destructive"
-                  onClick={() => navigate(`/applications/${topFlagged.id}`)}
-                >
-                  查看最高概率申请 ›
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
         {windowChecked && !collegeId && (
           <Card className="border-destructive/40 bg-destructive/5">
             <CardContent className="flex items-center gap-3 py-3 text-sm">
@@ -219,33 +175,11 @@ const MyApplications = () => {
                 ) : rows.length === 0 ? (
                   <TableRow><TableCell colSpan={7}><EmptyState title="还没有申请" description="点击右上角「新申请」开始提交" /></TableCell></TableRow>
                 ) : rows.map((r) => (
-                  <TableRow
-                    key={r.id}
-                    className={cn(
-                      r.aigc_status === "fake" && "border-l-2 border-l-destructive bg-destructive/5",
-                      r.aigc_status === "suspect" && "border-l-2 border-l-warning bg-warning/5",
-                    )}
-                  >
+                  <TableRow key={r.id}>
                     <TableCell className="font-medium">{getAppTitle(r)}</TableCell>
                     <TableCell className="max-w-xs truncate">{getItemsSummary(r)}</TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <StatusBadge status={r.status} audience="student" />
-                        {(r.aigc_status === "fake" || r.aigc_status === "suspect") && (
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "gap-1",
-                              r.aigc_status === "fake"
-                                ? "border-destructive/50 bg-destructive/10 text-destructive"
-                                : "border-warning/50 bg-warning/10 text-warning",
-                            )}
-                          >
-                            <ShieldAlert className="h-3 w-3" />
-                            疑似 AI 生成
-                          </Badge>
-                        )}
-                      </div>
+                      <StatusBadge status={r.status} audience="student" />
                     </TableCell>
                     <TableCell>{r.ai_suggested_credit ?? "—"}</TableCell>
                     <TableCell>{displayFinalCredit(r)}</TableCell>
