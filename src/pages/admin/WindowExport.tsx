@@ -15,8 +15,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Download, Loader2 } from "lucide-react";
 import { toastError } from "@/lib/errors";
 import { deserializeItems } from "@/lib/parseForm";
-import JSZip from "jszip";
-import { saveAs } from "file-saver";
+import { runZipExport, checkStorageReachable, ExportAborted, type ExportTask, type ExportProgress } from "@/lib/zipExport";
 
 const BUCKET = "application-files";
 
