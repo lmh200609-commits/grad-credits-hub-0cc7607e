@@ -16,7 +16,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toast } from "sonner";
-import { Plus, FileSpreadsheet, RefreshCw, Trash2, FileText, Pencil, Download } from "lucide-react";
+import { Plus, FileSpreadsheet, RefreshCw, Trash2, FileText, Pencil, Download, FolderArchive } from "lucide-react";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { toastError } from "@/lib/errors";
 import { buildWindowStats, exportWindowStatsXlsx } from "@/lib/windowStats";
