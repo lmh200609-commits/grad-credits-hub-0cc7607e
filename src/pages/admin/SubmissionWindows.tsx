@@ -301,6 +301,15 @@ const SubmissionWindows = () => {
                             </TooltipTrigger>
                             <TooltipContent>导出学院统计表（Excel）</TooltipContent>
                           </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button size="sm" variant="ghost"
+                                onClick={() => navigate(`/admin/windows/${w.id}/export`)} aria-label="导出材料">
+                                <FolderArchive className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>导出学生材料（按班级 / 学号-姓名 打包）</TooltipContent>
+                          </Tooltip>
                           {w.report_generated_at && (
                             <Tooltip>
                               <TooltipTrigger asChild>
