@@ -81,7 +81,21 @@ export default function WindowExport() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [exporting, setExporting] = useState(false);
-  const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [progress, setProgress] = useState<ExportProgress>({ volume: 1, done: 0, total: 0, elapsedMs: 0, etaMs: null });
+  const [failed, setFailed] = useState<ExportTask[]>([]);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!exporting) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [exporting]);
+
+
 
   const load = useCallback(async () => {
     if (!id) return;
