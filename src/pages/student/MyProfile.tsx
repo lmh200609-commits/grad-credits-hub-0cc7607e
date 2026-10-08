@@ -10,6 +10,8 @@ import { toast } from "@/hooks/use-toast";
 import { Upload, AlertCircle } from "lucide-react";
 import { YmdPicker } from "@/components/ui/ymd-picker";
 import { toastErrorLegacy } from "@/lib/errors";
+import { missingProfileFields } from "@/lib/profileCompleteness";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Profile = {
   full_name: string | null;
@@ -36,7 +38,8 @@ type Profile = {
 };
 
 const MyProfile = () => {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
+  const [idCardLocked, setIdCardLocked] = useState(false);
   const [p, setP] = useState<Profile | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -60,6 +63,7 @@ const MyProfile = () => {
       enrollment_year: null, advisor: "", apartment_no: "", dorm_room: "", bed_no: "",
       address: "", emergency_contact: "", emergency_phone: "",
     });
+    setIdCardLocked(!!(data as Profile | null)?.id_card?.trim());
     if ((data as Profile)?.photo_url) {
       const { data: signed } = await supabase.storage
         .from("application-files")
@@ -93,7 +97,10 @@ const MyProfile = () => {
 
   const saveProfile = async () => {
     if (!user || !p || saving) return;
-    // Light validations
+    const missing = missingProfileFields(p);
+    if (missing.length > 0) {
+      return toast({ title: `请填写：${missing.join("、")}`, variant: "destructive" });
+    }
     if (p.phone) {
       const d = String(p.phone).replace(/\D+/g, "");
       if (d.length < 7 || d.length > 15) {
@@ -123,6 +130,7 @@ const MyProfile = () => {
     const { error } = await supabase
       .from("profiles")
       .update({
+        ...(idCardLocked ? {} : { id_card: p.id_card?.trim() || null }),
         phone: p.phone || null,
         gender: p.gender || null,
         ethnicity: p.ethnicity || null,
@@ -144,17 +152,11 @@ const MyProfile = () => {
     setSaving(false);
     if (error) return toastErrorLegacy(error, "保存失败");
     toast({ title: "已保存" });
+    await refreshProfile();
     load();
   };
 
-  const missingList: string[] = !p ? [] : [
-    !p.phone && "手机号",
-    !p.gender && "性别",
-    !p.birth_date && "出生日期",
-    !p.class_name && "班级",
-    !p.department && "院系",
-    !p.advisor && "辅导员",
-  ].filter(Boolean) as string[];
+  const missingList: string[] = missingProfileFields(p);
 
   const onPick = () => fileRef.current?.click();
 
@@ -198,7 +200,7 @@ const MyProfile = () => {
           <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <div>
-              你的资料还缺少：<span className="font-medium">{missingList.join("、")}</span>。请在下方补全后点击「保存修改」。
+              请先完善个人信息，完善后才能提交申请。还缺少：<span className="font-medium">{missingList.join("、")}</span>，补全后点击「保存修改」。
             </div>
           </div>
         )}
@@ -230,21 +232,30 @@ const MyProfile = () => {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">基本信息</CardTitle>
-            <CardDescription>姓名、学号、学校、身份证号由学校统一维护；其余字段如有缺失或变化可自行补全。</CardDescription>
+            <CardDescription>带 * 为必填。姓名、学号、学校由学校统一维护；身份证号首次填写保存后不可自行修改，如有错误请联系老师。</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
-            <Field label="姓名" v={p.full_name} />
+            <Field label="姓名 *" v={p.full_name} />
             <Field label="学号" v={p.student_no} />
             <EField label="院系" v={p.department ?? ""} onChange={(v) => setField("department", v)} />
-            <EField label="专业" v={p.major ?? ""} onChange={(v) => setField("major", v)} />
-            <EField label="班级" v={p.class_name ?? ""} onChange={(v) => setField("class_name", v)} />
+            <EField label="专业 *" v={p.major ?? ""} onChange={(v) => setField("major", v)} />
+            <EField label="班级 *" v={p.class_name ?? ""} onChange={(v) => setField("class_name", v)} />
             <EField
               label="年级（入学年份）"
               v={p.enrollment_year != null ? String(p.enrollment_year) : ""}
               onChange={(v) => setField("enrollment_year", v ? Number(v) : null)}
               placeholder="例如 2024"
             />
-            <EField label="性别" v={p.gender ?? ""} onChange={(v) => setField("gender", v)} placeholder="男 / 女" />
+            <div>
+              <Label>性别 *</Label>
+              <Select value={p.gender ?? ""} onValueChange={(v) => setField("gender", v)}>
+                <SelectTrigger><SelectValue placeholder="请选择" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="男">男</SelectItem>
+                  <SelectItem value="女">女</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <EField label="民族" v={p.ethnicity ?? ""} onChange={(v) => setField("ethnicity", v)} />
             <EField label="政治面貌" v={p.political_status ?? ""} onChange={(v) => setField("political_status", v)} />
             <div>
@@ -258,7 +269,11 @@ const MyProfile = () => {
               />
             </div>
             <EField label="辅导员" v={p.advisor ?? ""} onChange={(v) => setField("advisor", v)} />
-            <Field label="身份证号" v={p.id_card} />
+            {idCardLocked ? (
+              <Field label="身份证号 *" v={p.id_card} />
+            ) : (
+              <EField label="身份证号 *" v={p.id_card ?? ""} onChange={(v) => setField("id_card", v)} />
+            )}
             <EField label="手机号" v={p.phone ?? ""} onChange={(v) => setField("phone", v)} />
             <EField label="公寓号" v={p.apartment_no ?? ""} onChange={(v) => setField("apartment_no", v)} />
             <EField label="宿舍号" v={p.dorm_room ?? ""} onChange={(v) => setField("dorm_room", v)} />
