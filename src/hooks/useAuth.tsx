@@ -3,6 +3,7 @@ import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { handleAuthExpired } from "@/lib/sessionGuard";
 import { setStaffAssistantUser } from "@/hooks/useStaffAssistantStore";
+import { isProfileComplete } from "@/lib/profileCompleteness";
 
 type AppRole = "super_admin" | "admin" | "teacher" | "student";
 
@@ -16,6 +17,9 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
   isSuperAdmin: boolean;
+  /** 仅学生有意义：null=尚未加载 */
+  profileComplete: boolean | null;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -26,6 +30,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [collegeId, setCollegeId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileComplete, setProfileComplete] = useState<boolean | null>(null);
+
+  const fetchProfile = async (userId: string) => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("full_name, class_name, major, id_card, gender")
+      .eq("user_id", userId)
+      .maybeSingle();
+    setProfileComplete(isProfileComplete(data));
+  };
 
   const fetchRoles = async (userId: string) => {
     const { data } = await supabase
@@ -37,6 +51,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Pick college_id from first non-super_admin row that has one
     const cid = (data ?? []).find((r) => r.role !== "super_admin" && r.college_id)?.college_id ?? null;
     setCollegeId(cid as string | null);
+    if (rs.includes("student")) await fetchProfile(userId);
+    else setProfileComplete(true);
+  };
+
+  const refreshProfile = async () => {
+    if (user) await fetchProfile(user.id);
   };
 
   useEffect(() => {
@@ -51,6 +71,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setRoles([]);
         setCollegeId(null);
+        setProfileComplete(null);
         // Token refresh failed (newSession === null on TOKEN_REFRESHED) or
         // server-side sign-out arrived → kick to /login (unless already there).
         if (
@@ -91,7 +112,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isSuperAdmin = roles.includes("super_admin");
 
   return (
-    <AuthContext.Provider value={{ user, session, roles, collegeId, loading, signIn, signOut, hasRole, isSuperAdmin }}>
+    <AuthContext.Provider value={{ user, session, roles, collegeId, loading, signIn, signOut, hasRole, isSuperAdmin, profileComplete, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
