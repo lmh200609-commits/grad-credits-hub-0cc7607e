@@ -50,6 +50,41 @@ export default function Apply() {
 
   const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const pendingUploadsRef = useRef<string[]>([]);
+  // 上传中：关页提醒；离开页面（切换路由）时清理已传但未成单的文件
+  useEffect(() => {
+    if (!submitting) return;
+    const onBefore = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", onBefore);
+    return () => window.removeEventListener("beforeunload", onBefore);
+  }, [submitting]);
+  useEffect(() => () => {
+    const left = pendingUploadsRef.current;
+    if (left.length) supabase.storage.from("application-files").remove(left).catch(() => {});
+  }, []);
+  // 进入页面时清理自己以往中途放弃留下的孤立文件（超过 1 小时且未被任何申请引用）
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        const { data: objs } = await supabase.storage.from("application-files").list(user.id, { limit: 1000 });
+        if (!objs?.length) return;
+        const [{ data: apps }, { data: atts }] = await Promise.all([
+          supabase.from("applications").select("file_path, form_file_path").eq("student_id", user.id),
+          supabase.from("application_attachments").select("file_path, applications!inner(student_id)").eq("applications.student_id", user.id),
+        ]);
+        const used = new Set<string>();
+        (apps ?? []).forEach((a) => { if (a.file_path) used.add(a.file_path); if (a.form_file_path) used.add(a.form_file_path); });
+        (atts ?? []).forEach((a: { file_path: string }) => used.add(a.file_path));
+        const cutoff = Date.now() - 3600_000;
+        const orphans = objs
+          .filter((o) => o.id && new Date(o.created_at ?? Date.now()).getTime() < cutoff)
+          .map((o) => `${user.id}/${o.name}`)
+          .filter((p) => /\/(form|ev)-/.test(p) && !used.has(p));
+        if (orphans.length && apps && atts) await supabase.storage.from("application-files").remove(orphans);
+      } catch { /* ignore */ }
+    })();
+  }, [user]);
   const [downloading, setDownloading] = useState<"template" | "sample" | null>(null);
 
   // 通过 fetch + Blob 下载：兼容 Lovable 预览环境（直接 <a download> 会被预览拦截）
@@ -216,58 +251,60 @@ export default function Apply() {
       }
 
       const stamp = Date.now();
-      // 1) 上传申请表
-      const formPath = `${user.id}/form-${stamp}-${formFile.name.replace(/[^\w.\-一-龥]/g, "_")}`;
-      const { error: formErr } = await supabase.storage.from(BUCKET).upload(formPath, formFile);
-      if (formErr) throw formErr;
+      // 本次已上传的文件；任一步失败都整体回滚删除，不留残余
+      const uploadedPaths: string[] = [];
+      let appId: string;
+      try {
+        // 1) 上传申请表
+        const formPath = `${user.id}/form-${stamp}-${formFile.name.replace(/[^\w.\-一-龥]/g, "_")}`;
+        const { error: formErr } = await supabase.storage.from(BUCKET).upload(formPath, formFile);
+        if (formErr) throw formErr;
+        uploadedPaths.push(formPath);
+        pendingUploadsRef.current = uploadedPaths;
 
-      // 2) 上传佐证图片
-      const uploaded: { path: string; name: string; hash: string | null }[] = [];
-      for (let i = 0; i < attachments.length; i++) {
-        const a = attachments[i];
-        const p = `${user.id}/ev-${stamp}-${i}-${a.file.name.replace(/[^\w.\-一-龥]/g, "_")}`;
-        const { error } = await supabase.storage.from(BUCKET).upload(p, a.file);
-        if (error) throw error;
-        uploaded.push({ path: p, name: a.file.name, hash: a.hash });
+        // 2) 上传佐证图片
+        const uploaded: { file_path: string; file_name: string; file_hash: string | null }[] = [];
+        for (let i = 0; i < attachments.length; i++) {
+          const a = attachments[i];
+          const p = `${user.id}/ev-${stamp}-${i}-${a.file.name.replace(/[^\w.\-一-龥]/g, "_")}`;
+          const { error } = await supabase.storage.from(BUCKET).upload(p, a.file);
+          if (error) throw new Error(`第 ${i + 1} 张佐证材料上传失败，请重试`);
+          uploadedPaths.push(p);
+          uploaded.push({ file_path: p, file_name: a.file.name, file_hash: a.hash });
+        }
+        if (uploaded.length !== attachments.length) throw new Error("佐证材料未全部上传成功，请重试");
+
+        // 3) 全部文件到位后，一次性创建申请 + 附件记录（同成同败）
+        const first = items[0];
+        const { data: newId, error: rpcErr } = await supabase.rpc("submit_application" as never, {
+          _app: {
+            description: serializeItems(items),
+            selected_keywords: Array.from(new Set(items.map((i) => i.category))),
+            custom_keywords: Array.from(new Set(items.map((i) => i.achievement))),
+            form_file_path: formPath,
+            item_category: first.category,
+            item_project: first.project,
+            achievement_name: first.achievement,
+            level_name: first.level,
+            self_rank: first.rank,
+            claimed_credit: claimedTotal || null,
+            credit_standard: standardTotal,
+            credit_compliance: complianceOverall,
+            keywords_fingerprint: fps[0] || null,
+          },
+          _attachments: uploaded,
+        } as never);
+        if (rpcErr) throw rpcErr;
+        appId = newId as unknown as string;
+        pendingUploadsRef.current = [];
+      } catch (err) {
+        pendingUploadsRef.current = [];
+        if (uploadedPaths.length) {
+          await supabase.storage.from(BUCKET).remove(uploadedPaths).catch(() => {});
+        }
+        throw err;
       }
-
-      const first = items[0];
-      const { data: appRow, error: insErr } = await supabase
-        .from("applications")
-        .insert({
-          student_id: user.id,
-          description: serializeItems(items),
-          selected_keywords: Array.from(new Set(items.map((i) => i.category))),
-          custom_keywords: Array.from(new Set(items.map((i) => i.achievement))),
-          file_path: uploaded[0].path,
-          file_hash: uploaded[0].hash,
-          form_file_path: formPath,
-          item_category: first.category,
-          item_project: first.project,
-          achievement_name: first.achievement,
-          level_name: first.level,
-          self_rank: first.rank,
-          claimed_credit: claimedTotal || null,
-          credit_standard: standardTotal,
-          credit_compliance: complianceOverall,
-          keywords_fingerprint: fps[0] || null,
-          status: "pending_ai",
-        })
-        .select("id")
-        .single();
-      if (insErr) throw insErr;
-
-      // 3) 附件记录
-      const { error: attErr } = await supabase.from("application_attachments").insert(
-        uploaded.map((u, i) => ({
-          application_id: appRow.id,
-          file_path: u.path,
-          file_name: u.name,
-          file_hash: u.hash,
-          sort_order: i,
-        })),
-      );
-      if (attErr) throw attErr;
+      const appRow = { id: appId };
 
       // 4) 触发自动核对 + 人脸比对（尽力而为，不阻塞；失败时教师可在详情页重试或直接审核）
       supabase.functions.invoke("evaluate-application", { body: { application_id: appRow.id } })

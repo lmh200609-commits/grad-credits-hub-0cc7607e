@@ -1409,6 +1409,10 @@ export type Database = {
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       strip_time_tokens: { Args: { s: string }; Returns: string }
+      submit_application: {
+        Args: { _app: Json; _attachments: Json }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "admin" | "teacher" | "student" | "super_admin"
