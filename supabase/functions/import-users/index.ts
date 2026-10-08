@@ -50,6 +50,7 @@ type Row = {
   role: "admin" | "teacher" | "student";
   password: string;
   gender?: string;
+  id_card?: string;
   ethnicity?: string;
   political_status?: string;
   birth_date?: string;
@@ -102,6 +103,7 @@ async function createOneUser(
       college_id: collegeIdForRow,
       email,
       gender: r.gender?.trim() || null,
+      ...(r.id_card?.trim() ? { id_card: r.id_card.trim() } : {}),
       ethnicity: r.ethnicity?.trim() || null,
       political_status: r.political_status?.trim() || null,
       birth_date: r.birth_date?.trim() || null,
