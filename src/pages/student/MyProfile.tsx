@@ -44,9 +44,6 @@ const MyProfile = () => {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const [pwd, setPwd] = useState("");
-  const [pwd2, setPwd2] = useState("");
-  const [pwdSaving, setPwdSaving] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -76,21 +73,6 @@ const MyProfile = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const changePassword = async () => {
-    if (pwdSaving) return;
-    if (!pwd || pwd.length < 6) {
-      return toast({ title: "新密码至少 6 位", variant: "destructive" });
-    }
-    if (pwd !== pwd2) {
-      return toast({ title: "两次输入的密码不一致", variant: "destructive" });
-    }
-    setPwdSaving(true);
-    const { error } = await supabase.auth.updateUser({ password: pwd });
-    setPwdSaving(false);
-    if (error) return toastErrorLegacy(error, "修改失败");
-    setPwd(""); setPwd2("");
-    toast({ title: "密码已更新" });
-  };
 
   const setField = <K extends keyof Profile>(k: K, v: Profile[K]) =>
     setP((prev) => (prev ? { ...prev, [k]: v } : prev));
@@ -299,22 +281,10 @@ const MyProfile = () => {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">修改密码</CardTitle>
-            <CardDescription>设置新的登录密码，至少 6 位</CardDescription>
+            <CardDescription>请点击页面右上角「修改密码」，需先输入当前密码验证身份</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <Label>新密码</Label>
-              <Input type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} autoComplete="new-password" />
-            </div>
-            <div>
-              <Label>确认新密码</Label>
-              <Input type="password" value={pwd2} onChange={(e) => setPwd2(e.target.value)} autoComplete="new-password" />
-            </div>
-            <div className="sm:col-span-2">
-              <Button onClick={changePassword} disabled={pwdSaving}>
-                {pwdSaving ? "提交中…" : "提交"}
-              </Button>
-            </div>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">新密码至少 8 位，须同时包含字母和数字。</p>
           </CardContent>
         </Card>
       </div>

@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import AiAssistant from "@/components/AiAssistant";
 import StaffAiAssistant from "@/components/StaffAiAssistant";
+import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 import {
   LayoutDashboard, Upload, BookOpen, ClipboardCheck, FileText, Library, LogOut,
   Users, BarChart3, Trophy, UserCog, Inbox, Send, ScrollText, Tags, History, Cpu, IdCard, GraduationCap,
@@ -310,6 +311,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
               <span className="hidden max-w-[40vw] truncate text-muted-foreground md:inline">
                 {roleLabel}
               </span>
+              <ChangePasswordDialog />
               <Button variant="ghost" size="sm" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4 sm:mr-1" />
                 <span className="hidden sm:inline">退出</span>
