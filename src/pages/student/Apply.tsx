@@ -50,6 +50,18 @@ export default function Apply() {
 
   const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const pendingUploadsRef = useRef<string[]>([]);
+  // 上传中：关页提醒；离开页面（切换路由）时清理已传但未成单的文件
+  useEffect(() => {
+    if (!submitting) return;
+    const onBefore = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", onBefore);
+    return () => window.removeEventListener("beforeunload", onBefore);
+  }, [submitting]);
+  useEffect(() => () => {
+    const left = pendingUploadsRef.current;
+    if (left.length) supabase.storage.from("application-files").remove(left).catch(() => {});
+  }, []);
   const [downloading, setDownloading] = useState<"template" | "sample" | null>(null);
 
   // 通过 fetch + Blob 下载：兼容 Lovable 预览环境（直接 <a download> 会被预览拦截）
