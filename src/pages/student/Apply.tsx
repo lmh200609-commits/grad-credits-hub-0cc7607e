@@ -81,7 +81,7 @@ export default function Apply() {
           .filter((o) => o.id && new Date(o.created_at ?? Date.now()).getTime() < cutoff)
           .map((o) => `${user.id}/${o.name}`)
           .filter((p) => /\/(form|ev)-/.test(p) && !used.has(p));
-        if (orphans.length && apps) await supabase.storage.from("application-files").remove(orphans);
+        if (orphans.length && apps && atts) await supabase.storage.from("application-files").remove(orphans);
       } catch { /* ignore */ }
     })();
   }, [user]);
