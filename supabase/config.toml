@@ -1,8 +1,5 @@
 project_id = "eceqokilpppnwtfzgbvq"
 
-[functions.bootstrap-admin]
-verify_jwt = false
-
 [functions.import-users]
 verify_jwt = false
 
@@ -15,9 +12,6 @@ verify_jwt = false
 [functions.delete-user]
 verify_jwt = false
 
-[functions.dev-seed]
-verify_jwt = false
-
 [functions.ai-parse-roster]
 verify_jwt = false
 
@@ -28,9 +22,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.staff-ai-assistant]
-verify_jwt = false
-
-[functions.ai-eval-stress-test]
 verify_jwt = false
 
 [functions.polish-answer]
