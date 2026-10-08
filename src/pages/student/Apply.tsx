@@ -51,6 +51,7 @@ export default function Apply() {
   const [attachments, setAttachments] = useState<AttachmentDraft[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const pendingUploadsRef = useRef<string[]>([]);
+  const leftPageRef = useRef(false);
   // 上传中：关页提醒；离开页面（切换路由）时清理已传但未成单的文件
   useEffect(() => {
     if (!submitting) return;
@@ -59,6 +60,7 @@ export default function Apply() {
     return () => window.removeEventListener("beforeunload", onBefore);
   }, [submitting]);
   useEffect(() => () => {
+    leftPageRef.current = true;
     const left = pendingUploadsRef.current;
     if (left.length) supabase.storage.from("application-files").remove(left).catch(() => {});
   }, []);
@@ -254,12 +256,14 @@ export default function Apply() {
       // 本次已上传的文件；任一步失败都整体回滚删除，不留残余
       const uploadedPaths: string[] = [];
       let appId: string;
+      const ensureStay = () => { if (leftPageRef.current) throw new Error("已离开页面，本次提交已取消"); };
       try {
         // 1) 上传申请表
         const formPath = `${user.id}/form-${stamp}-${formFile.name.replace(/[^\w.\-一-龥]/g, "_")}`;
         const { error: formErr } = await supabase.storage.from(BUCKET).upload(formPath, formFile);
         if (formErr) throw formErr;
         uploadedPaths.push(formPath);
+        ensureStay();
         pendingUploadsRef.current = uploadedPaths;
 
         // 2) 上传佐证图片
@@ -270,10 +274,13 @@ export default function Apply() {
           const { error } = await supabase.storage.from(BUCKET).upload(p, a.file);
           if (error) throw new Error(`第 ${i + 1} 张佐证材料上传失败，请重试`);
           uploadedPaths.push(p);
+          ensureStay();
           uploaded.push({ file_path: p, file_name: a.file.name, file_hash: a.hash });
         }
         if (uploaded.length !== attachments.length) throw new Error("佐证材料未全部上传成功，请重试");
 
+        ensureStay();
+        pendingUploadsRef.current = []; // 进入提交阶段：离开页面也不再删文件，由提交结果决定
         // 3) 全部文件到位后，一次性创建申请 + 附件记录（同成同败）
         const first = items[0];
         const { data: newId, error: rpcErr } = await supabase.rpc("submit_application" as never, {
