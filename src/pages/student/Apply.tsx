@@ -62,6 +62,29 @@ export default function Apply() {
     const left = pendingUploadsRef.current;
     if (left.length) supabase.storage.from("application-files").remove(left).catch(() => {});
   }, []);
+  // 进入页面时清理自己以往中途放弃留下的孤立文件（超过 1 小时且未被任何申请引用）
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        const { data: objs } = await supabase.storage.from("application-files").list(user.id, { limit: 1000 });
+        if (!objs?.length) return;
+        const [{ data: apps }, { data: atts }] = await Promise.all([
+          supabase.from("applications").select("file_path, form_file_path").eq("student_id", user.id),
+          supabase.from("application_attachments").select("file_path, applications!inner(student_id)").eq("applications.student_id", user.id),
+        ]);
+        const used = new Set<string>();
+        (apps ?? []).forEach((a) => { if (a.file_path) used.add(a.file_path); if (a.form_file_path) used.add(a.form_file_path); });
+        (atts ?? []).forEach((a: { file_path: string }) => used.add(a.file_path));
+        const cutoff = Date.now() - 3600_000;
+        const orphans = objs
+          .filter((o) => o.id && new Date(o.created_at ?? Date.now()).getTime() < cutoff)
+          .map((o) => `${user.id}/${o.name}`)
+          .filter((p) => /\/(form|ev)-/.test(p) && !used.has(p));
+        if (orphans.length && apps) await supabase.storage.from("application-files").remove(orphans);
+      } catch { /* ignore */ }
+    })();
+  }, [user]);
   const [downloading, setDownloading] = useState<"template" | "sample" | null>(null);
 
   // 通过 fetch + Blob 下载：兼容 Lovable 预览环境（直接 <a download> 会被预览拦截）
