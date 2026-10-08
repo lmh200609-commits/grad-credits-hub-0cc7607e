@@ -280,6 +280,7 @@ export default function Apply() {
         if (uploaded.length !== attachments.length) throw new Error("佐证材料未全部上传成功，请重试");
 
         ensureStay();
+        pendingUploadsRef.current = []; // 进入提交阶段：离开页面也不再删文件，由提交结果决定
         // 3) 全部文件到位后，一次性创建申请 + 附件记录（同成同败）
         const first = items[0];
         const { data: newId, error: rpcErr } = await supabase.rpc("submit_application" as never, {
