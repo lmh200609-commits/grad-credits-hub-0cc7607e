@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { loginSchema, type LoginInput } from "@/lib/schemas";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import loginBg from "@/assets/login-bg.jpg";
 
 const accountToEmail = (account: string) => `${account}@admin.local`;
@@ -51,40 +52,29 @@ const Login = () => {
   };
 
   return (
-    <main className="grid min-h-screen bg-background lg:grid-cols-[1.15fr_1fr]">
-      <section className="relative hidden overflow-hidden lg:block">
-        <div
-          aria-hidden
-          className="absolute inset-0 bg-cover bg-center animate-bg-drift"
-          style={{ backgroundImage: `url(${loginBg})` }}
-        />
-        <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/30 to-transparent" />
-        <div className="relative z-10 flex h-full flex-col justify-end p-12 text-background">
-          <p className="mb-3 text-sm tracking-[0.3em] opacity-80">CREDIT CERTIFICATION</p>
-          <h2 className="text-4xl font-bold leading-tight">创新实践学分<br />认定与管理平台</h2>
-          <p className="mt-4 max-w-md text-sm leading-relaxed opacity-85">
-            在线提交申请表与佐证材料，教师审核、学分统计、材料归档一站完成。
-          </p>
-        </div>
-      </section>
-
-      <section className="flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-sm space-y-8">
-          <div className="space-y-2">
-            <div className="h-1 w-10 rounded-full bg-primary" />
-            <h1 className="text-3xl font-bold tracking-tight">欢迎登录</h1>
-            <p className="text-sm text-muted-foreground">学分认证系统 · 请使用管理员分配的账号</p>
-          </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden p-4">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-90 animate-bg-drift"
+        style={{ backgroundImage: `url(${loginBg})` }}
+      />
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-background/30" />
+      <div className="relative z-10 w-full flex items-center justify-center md:justify-end md:pr-20 lg:pr-32">
+      <Card className="w-full max-w-md backdrop-blur-md bg-card/85 border-white/40 shadow-xl">
+        <CardHeader className="space-y-2 text-center">
+          <CardTitle className="text-2xl">学分认证系统</CardTitle>
+          <CardDescription>请使用管理员分配的账号登录</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             <div className="space-y-2">
               <Label htmlFor="account">账号</Label>
               <Input
                 id="account"
                 type="text"
+                inputMode="numeric"
                 autoComplete="username"
-                placeholder="学号 / 工号"
-                className="h-11"
+                placeholder="学号 / 工号 / 手机号"
                 {...register("account")}
                 aria-invalid={!!errors.account}
               />
@@ -96,23 +86,21 @@ const Login = () => {
                 id="password"
                 type="password"
                 autoComplete="current-password"
-                placeholder="请输入密码"
-                className="h-11"
                 {...register("password")}
                 aria-invalid={!!errors.password}
               />
               {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
             </div>
-            <Button type="submit" variant="solid" className="h-11 w-full text-base" disabled={submitting}>
-              {submitting ? "登录中…" : "登 录"}
+            <Button type="submit" variant="solid" className="w-full" disabled={submitting}>
+              {submitting ? "登录中…" : "登录"}
             </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              账号由管理员统一导入，本系统不支持自助注册
+            </p>
           </form>
-
-          <p className="border-t pt-6 text-center text-xs text-muted-foreground">
-            账号由管理员统一导入，不支持自助注册；忘记密码请联系老师重置
-          </p>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
+      </div>
     </main>
   );
 };
