@@ -269,7 +269,9 @@ export default function Apply() {
       );
       if (attErr) throw attErr;
 
-      // 4) 人脸比对（尽力而为，不阻塞）
+      // 4) 触发自动核对 + 人脸比对（尽力而为，不阻塞；失败时教师可在详情页重试或直接审核）
+      supabase.functions.invoke("evaluate-application", { body: { application_id: appRow.id } })
+        .catch(() => { /* ignore */ });
       supabase.functions.invoke("face-compare", { body: { application_id: appRow.id } })
         .catch(() => { /* ignore */ });
 

@@ -879,7 +879,7 @@ const ApplicationDetail = () => {
           />
         )}
 
-        {isReviewer && app.status !== "pending_ai" && (
+        {isReviewer && (
           <Card>
             <CardHeader>
               <CardTitle className="text-base">
