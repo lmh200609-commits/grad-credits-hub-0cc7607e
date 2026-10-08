@@ -61,7 +61,7 @@ export async function buildWindowStats(params: {
       return {
         no: 0,
         college: params.collegeName,
-        major: p?.major ?? p?.department ?? "",
+        major: p?.major ?? "",
         className: p?.class_name ?? "",
         name: p?.full_name ?? "",
         studentNo: p?.student_no ?? "",

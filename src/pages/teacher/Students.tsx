@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import BulkUserDialog from "@/components/BulkUserDialog";
 import { toastError } from "@/lib/errors";
 import { gradeOf } from "@/lib/creditStandard";
+import { missingProfileFields } from "@/lib/profileCompleteness";
 
 const PAGE_SIZE = 50;
 
@@ -36,6 +37,8 @@ type Profile = {
   major: string | null;
   class_name: string | null;
   phone: string | null;
+  id_card: string | null;
+  gender: string | null;
 };
 
 const ALL = "__all__";
@@ -58,7 +61,7 @@ const Students = () => {
     setLoading(true);
     const [roleRows, profileRows, creditRows] = await Promise.all([
       fetchAll<{ user_id: string }>(supabase.from("user_roles").select("user_id").eq("role", "student")),
-      fetchAll<Profile>(supabase.from("profiles").select("user_id, full_name, student_no, department, major, class_name, phone")),
+      fetchAll<Profile>(supabase.from("profiles").select("user_id, full_name, student_no, department, major, class_name, phone, id_card, gender")),
       fetchAll<{ student_id: string; final_credit: number | null; ai_suggested_credit: number | null }>(
         supabase.from("applications").select("student_id, final_credit, ai_suggested_credit").in("status", ["approved", "auto_approved"]),
       ),
@@ -196,7 +199,15 @@ const Students = () => {
                 ) : (
                   paged.map((r) => (
                     <TableRow key={r.user_id}>
-                      <TableCell className="font-medium">{r.full_name ?? "—"}</TableCell>
+                      <TableCell className="font-medium">
+                        {r.full_name ?? "—"}
+                        {(() => {
+                          const m = missingProfileFields(r);
+                          return m.length > 0 ? (
+                            <span title={`缺少：${m.join("、")}`} className="ml-1.5 rounded bg-warning/15 px-1.5 py-0.5 text-xs font-normal text-warning">资料未完善</span>
+                          ) : null;
+                        })()}
+                      </TableCell>
                       <TableCell>{r.student_no ?? "—"}</TableCell>
                       <TableCell>{r.department ?? "—"}</TableCell>
                       <TableCell>{r.major ?? "—"}</TableCell>

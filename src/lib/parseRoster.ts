@@ -10,6 +10,7 @@ export type ParsedRow = {
   role: "admin" | "teacher" | "student";
   password: string;
   gender?: string;
+  id_card?: string;
   ethnicity?: string;
   political_status?: string;
   birth_date?: string;
@@ -26,6 +27,7 @@ export const TEMPLATE_COLUMNS: { header: string; field: string; required?: boole
   { header: "姓名", field: "full_name", required: true, note: "1-30 字符" },
   { header: "角色", field: "role", required: true, note: "学生 / 教师 / 管理员" },
   { header: "性别", field: "gender", note: "男 / 女" },
+  { header: "身份证号", field: "id_card", note: "可选；不填则学生首次登录时自行填写" },
   { header: "民族", field: "ethnicity", note: "例：汉族" },
   { header: "政治面貌", field: "political_status", note: "例：群众 / 共青团员 / 中共党员" },
   { header: "出生日期", field: "birth_date", note: "YYYY-MM-DD（Excel 日期格式自动转换）" },
@@ -153,6 +155,7 @@ export const parseRosterWorkbook = async (
       full_name: fullName,
       role,
       gender: String(get(row, "性别") ?? "").trim() || undefined,
+      id_card: String(get(row, "身份证号") ?? "").trim() || undefined,
       ethnicity: String(get(row, "民族") ?? "").trim() || undefined,
       political_status: String(get(row, "政治面貌") ?? "").trim() || undefined,
       birth_date: toDateString(get(row, "出生日期")),
