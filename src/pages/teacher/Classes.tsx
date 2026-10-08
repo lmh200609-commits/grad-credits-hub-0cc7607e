@@ -58,7 +58,7 @@ const Classes = () => {
         user_id: r.user_id,
         full_name: r.full_name,
         student_no: r.student_no,
-        major: r.major ?? r.department ?? null,
+        major: r.major ?? null,
         class_name: r.class_name,
         total_credit: Number(r.total_credit ?? 0),
         approved_count: Number(r.approved_count ?? 0),
