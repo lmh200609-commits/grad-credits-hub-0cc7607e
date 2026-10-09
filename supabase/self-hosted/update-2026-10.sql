@@ -194,14 +194,17 @@ ALTER TABLE public.application_attachments ADD COLUMN IF NOT EXISTS file_name te
 ALTER TABLE public.application_attachments ADD COLUMN IF NOT EXISTS sort_order integer NOT NULL DEFAULT 0;
 
 -- ========== 来自迁移 20260908111116_ ==========
+DROP POLICY IF EXISTS "cases teacher insert own college" ON public.cases;
 CREATE POLICY "cases teacher insert own college"
 ON public.cases FOR INSERT TO authenticated
 WITH CHECK (has_role(auth.uid(), 'teacher'::app_role) AND college_id = current_user_college_id());
 
+DROP POLICY IF EXISTS "keywords teacher insert own college" ON public.keywords;
 CREATE POLICY "keywords teacher insert own college"
 ON public.keywords FOR INSERT TO authenticated
 WITH CHECK (has_role(auth.uid(), 'teacher'::app_role) AND college_id = current_user_college_id());
 
+DROP POLICY IF EXISTS "keywords teacher update own college" ON public.keywords;
 CREATE POLICY "keywords teacher update own college"
 ON public.keywords FOR UPDATE TO authenticated
 USING (has_role(auth.uid(), 'teacher'::app_role) AND college_id = current_user_college_id())
