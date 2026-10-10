@@ -1,25 +1,39 @@
-# 重新部署前的确认说明
+# 保留全部数据的更新方案（IP 变为 10.18.0.162）
 
-## 回答你的三个问题
+## 前提
+同一台服务器，只是 IP 从 172.20.10.10 变成了 10.18.0.162。数据库里的老师、学生、申请记录、AI 模型密钥全部原样保留，**不清库、不重建**。
 
-**1. 老师和学生会没有吗？—— 会，全部清空。**
-迁移包里的建库脚本（init.sql）会把服务器上现有的数据库清空重建，所有账号（学生、老师、管理员）和申请记录都会删除。迁移完成后需要重新建学院、导入老师和学生名单。
+## 要做的 4 件事（全部在 1Panel 面板内完成）
 
-**2. 管理员和超管还会存在吗？—— 会给你留一个。**
-迁移包里已准备好 admin-account.txt，建库后会自动创建一个超级管理员账号，用它登录后再在系统里重新创建其他管理员和导入老师、学生。
+### ① 改 Supabase 的地址（1Panel 文件 + 终端）
+1. 1Panel → 文件 → 打开 `/root/supabase-project/.env`
+2. 把里面所有 `172.20.10.10` 改成 `10.18.0.162`（一般 3 处：API_EXTERNAL_URL、SITE_URL、SUPABASE_PUBLIC_URL）
+3. 1Panel → 终端执行：`cd /root/supabase-project && docker compose up -d`（让新地址生效）
 
-**3. AI 鉴别和大模型要重新弄吗？—— 是的，要重新配。**
-AI 模型的密钥存在数据库里，清库后就没了。迁移完成后用超管登录，进入「AI 模型」页面重新填写密钥即可（和上次配置方法一样）。没配之前，AI 鉴别不会自动运行，但不影响提交和审核。
+### ② 更新后台功能（1Panel 文件 + 容器页）
+1. 1Panel → 文件 → 进入 `/root/supabase-project/volumes/functions/`
+2. 删除旧文件夹（dev-seed、ai-eval-stress-test、bootstrap-admin、process-eval-queue 如有），保留 `main`
+3. 上传迁移包里的 functions 内容覆盖
+4. 1Panel → 容器 → 重启 `supabase-edge-functions`
 
-## 迁移步骤（全部在 1Panel 面板内完成）
+### ③ 更新网页文件（1Panel 文件）
+1. 进入 `/opt/1panel/www/sites/localhost/index/`
+2. 上传 website.zip，右键解压覆盖（网页文件已按新地址 10.18.0.162 重新打包）
 
-1. 改 Supabase 的 3 个地址为 `10.18.0.162` 并重启（/root/supabase-project/.env）
-2. 上传 init.sql 到服务器，在 1Panel 终端执行建库命令，确认最后一行是「初始化完成」
-3. 上传 functions 文件夹到 /root/supabase-project/volumes/functions/，保留 main 文件夹，重启 supabase-edge-functions 容器
-4. 上传 website.zip 到 /opt/1panel/www/sites/localhost/index/，右键解压覆盖
-5. 按 openresty-config.txt 核对网站设置，用 admin-account.txt 里的账号登录并马上改密码
-6. 登录后重新建学院、导入老师和学生、配置 AI 模型密钥
+### ④ 核对网站设置 + 验证
+1. 按 openresty-config.txt 核对 1Panel 网站配置（try_files 等）
+2. 浏览器打开 `http://10.18.0.162`，Ctrl+F5 强刷
+3. 用原来的账号登录：老师、学生账号都还在，AI 鉴别配置也还在，不需要重新配
 
-## 迁移前建议
+## 不需要做的事
+- ❌ 不跑 init.sql（那是清库重建用的，会删掉所有数据）
+- ❌ 不用重新建学院、导入老师学生
+- ❌ 不用重新配 AI 模型密钥
+- ❌ 不用装 nginx、不用重装 Supabase
 
-- 如果服务器上现有数据还想保留，先在 1Panel 文件里把 /root/supabase-project/volumes/db/data 整个文件夹打包备份一份，出问题可以恢复。
+## 需要你准备的
+- 迁移包里的：functions 文件夹、website.zip、openresty-config.txt（我已放在文件区「迁移包-10.18.0.162」分组里，直接用）
+- init.sql 和 admin-account.txt 这次**用不上**，忽略即可
+
+## 建议（可选）
+更新前在 1Panel 文件里把 `/root/supabase-project/volumes/db/data` 打包备份一份，万一出问题可恢复。
