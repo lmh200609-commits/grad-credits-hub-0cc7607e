@@ -55,7 +55,7 @@ export default function AttachmentsGallery({ applicationId, fallbackPath }: { ap
             <button
               key={a.id}
               type="button"
-              onClick={() => isImg && url && setOpen(a)}
+              onClick={() => { if (!url) return; if (isImg) setOpen(a); else window.open(url, "_blank", "noopener"); }}
               className="group relative aspect-[4/3] overflow-hidden rounded-md border bg-muted/30 text-left"
             >
               {isImg && url ? (
@@ -63,16 +63,16 @@ export default function AttachmentsGallery({ applicationId, fallbackPath }: { ap
               ) : isImg ? (
                 <div className="flex h-full items-center justify-center text-muted-foreground"><ImageOff className="h-5 w-5" /></div>
               ) : (
-                <a href={url} target="_blank" rel="noreferrer" className="flex h-full flex-col items-center justify-center gap-1 text-muted-foreground">
+                <div className="flex h-full flex-col items-center justify-center gap-1 text-muted-foreground">
                   <FileText className="h-6 w-6" />
-                  <span className="px-1 text-center text-xs">{a.file_name ?? "附件"}</span>
-                </a>
+                  <span className="line-clamp-2 break-all px-1 text-center text-xs">{a.file_name ?? "附件"}</span>
+                </div>
               )}
             </button>
           );
         })}
       </div>
-      <p className="text-xs text-muted-foreground">共 {items.length} 份佐证材料，点击可放大查看</p>
+      <p className="text-xs text-muted-foreground">共 {items.length} 份佐证材料，点击查看（PDF 在新窗口打开）</p>
       <Dialog open={!!open} onOpenChange={(v) => !v && setOpen(null)}>
         <DialogContent className="max-w-4xl">
           {open && urls.get(open.id) && (
