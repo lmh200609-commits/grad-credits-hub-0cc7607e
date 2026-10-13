@@ -191,23 +191,25 @@ Deno.serve(async (req) => {
         .eq("application_id", application_id)
         .order("sort_order", { ascending: true })
         .limit(4);
-      // PDF 佐证：使用提交时渲染好的页面图片（<pdf>.p1.jpg / .p2.jpg）
+      // PDF 佐证：使用提交时渲染好的页面图片（<pdf>.p1.jpg ~ .p4.jpg）
       attachPaths = (atts ?? []).flatMap((a) =>
         /\.pdf$/i.test(a.file_path)
-          ? [`${a.file_path}.p1.jpg`, `${a.file_path}.p2.jpg`]
+          ? [1, 2, 3, 4].map((n) => `${a.file_path}.p${n}.jpg`)
           : IMAGE_EXT.test(a.file_path) ? [a.file_path] : []);
     }
     if (attachPaths.length === 0 && app.file_path && IMAGE_EXT.test(app.file_path)) {
       attachPaths = [app.file_path];
     }
     for (const p of attachPaths) {
-      if (imageDataUrls.length >= 4) break;
+      if (imageDataUrls.length >= 8) break;
       const d = await toDataUrl(p);
       if (d) imageDataUrls.push(d);
     }
     const imageDataUrl = imageDataUrls[0] ?? null; // 供既有兜底逻辑判断
     if (imageDataUrls.length) {
       attachmentNote = `已附佐证图片 ${imageDataUrls.length} 张`;
+    } else if (attachPaths.length > 0) {
+      attachmentNote = "PDF 未生成核对图片，需人工查看原件";
     } else if (app.file_path && !IMAGE_EXT.test(app.file_path)) {
       attachmentNote = `非图片附件 (${app.file_path.split(".").pop()})，未做视觉核验`;
     } else if (app.file_path) {

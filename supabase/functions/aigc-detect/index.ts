@@ -260,13 +260,26 @@ Deno.serve(async (req) => {
       return json({ status: "skipped", note: "AIGC 检测已被学院关闭" });
     }
 
-    if (!app.file_path || !IMAGE_EXT.test(app.file_path)) {
+    // 取待检测图片：优先用附件表第一份材料（PDF 用其第 1 页预览图），回退旧版单附件字段
+    let targetPath: string | null = null;
+    const { data: atts } = await admin
+      .from("application_attachments")
+      .select("file_path")
+      .eq("application_id", application_id)
+      .order("sort_order", { ascending: true })
+      .limit(1);
+    const first = atts?.[0]?.file_path ?? null;
+    if (first && /\.pdf$/i.test(first)) targetPath = `${first}.p1.jpg`;
+    else if (first && IMAGE_EXT.test(first)) targetPath = first;
+    else if (app.file_path && IMAGE_EXT.test(app.file_path)) targetPath = app.file_path;
+
+    if (!targetPath) {
       await writeResult({ aigc_status: "skipped", aigc_score: null, aigc_detail: { reason: "not an image" } });
       await promoteIfIntended();
       return json({ status: "skipped", note: "非图片附件，无需 AIGC 检测" });
     }
 
-    const { data: signed } = await admin.storage.from("application-files").createSignedUrl(app.file_path, 300);
+    const { data: signed } = await admin.storage.from("application-files").createSignedUrl(targetPath, 300);
     const imageUrl = signed?.signedUrl;
     if (!imageUrl) {
       await writeResult({ aigc_status: "error", aigc_detail: { reason: "no signed url" } });
