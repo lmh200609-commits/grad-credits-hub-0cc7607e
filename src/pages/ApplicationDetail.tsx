@@ -351,11 +351,10 @@ const ApplicationDetail = () => {
       toast({ title: "已驳回" });
     }
 
-    // 教师通过时：若图片尚未做过 AI 生图鉴别，自动补做一次
+    // 教师通过时：若尚未做过 AI 生图鉴别，自动补做一次（是否图片/PDF 由后台判断，无图会自动跳过）
     if (
       decision === "approved" &&
-      (!app.aigc_status || app.aigc_status === "pending") &&
-      /\.(png|jpe?g|webp|gif|bmp|pdf)$/i.test(String((app as any).file_path ?? ""))
+      (!app.aigc_status || app.aigc_status === "pending")
     ) {
       try {
         await supabase.functions.invoke("aigc-detect", { body: { application_id: app.id } });
