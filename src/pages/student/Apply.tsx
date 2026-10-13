@@ -20,7 +20,7 @@ import { randomUUID as newUuid } from "@/lib/uuid";
 import { parseApplicationForm, serializeItems, type FormItem } from "@/lib/parseForm";
 import { lookupStandardCredit, checkCreditCompliance, COMPLIANCE_LABEL } from "@/lib/creditStandard";
 import { Catalogs, EMPTY_CATALOGS, loadCatalogs } from "@/lib/catalog";
-
+import { renderPdfPages, pdfPreviewPath, pdfPathOfPreview } from "@/lib/pdfToImages";
 import { buildAchievementFingerprint } from "@/lib/keywordFingerprint";
 
 const BUCKET = "application-files";
@@ -82,7 +82,7 @@ export default function Apply() {
         const orphans = objs
           .filter((o) => o.id && new Date(o.created_at ?? Date.now()).getTime() < cutoff)
           .map((o) => `${user.id}/${o.name}`)
-          .filter((p) => /\/(form|ev)-/.test(p) && !used.has(p));
+          .filter((p) => /\/(form|ev)-/.test(p) && !used.has(p) && !used.has(pdfPathOfPreview(p) ?? ""));
         if (orphans.length && apps && atts) await supabase.storage.from("application-files").remove(orphans);
       } catch { /* ignore */ }
     })();
@@ -274,6 +274,16 @@ export default function Apply() {
           const { error } = await supabase.storage.from(BUCKET).upload(p, a.file);
           if (error) throw new Error(`第 ${i + 1} 份佐证材料上传失败，请重试`);
           uploadedPaths.push(p);
+          ensureStay();
+          // 渲染为图片供自动核对；失败不影响提交（老师仍可人工查看 PDF）
+          try {
+            const pages = await renderPdfPages(a.file);
+            for (let n = 0; n < pages.length; n++) {
+              const pp = pdfPreviewPath(p, n + 1);
+              const { error: pe } = await supabase.storage.from(BUCKET).upload(pp, pages[n], { contentType: "image/jpeg" });
+              if (!pe) uploadedPaths.push(pp);
+            }
+          } catch { /* ignore */ }
           ensureStay();
           uploaded.push({ file_path: p, file_name: a.file.name, file_hash: a.hash });
         }

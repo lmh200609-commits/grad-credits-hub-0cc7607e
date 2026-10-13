@@ -191,12 +191,17 @@ Deno.serve(async (req) => {
         .eq("application_id", application_id)
         .order("sort_order", { ascending: true })
         .limit(4);
-      attachPaths = (atts ?? []).map((a) => a.file_path).filter((p) => IMAGE_EXT.test(p));
+      // PDF 佐证：使用提交时渲染好的页面图片（<pdf>.p1.jpg / .p2.jpg）
+      attachPaths = (atts ?? []).flatMap((a) =>
+        /\.pdf$/i.test(a.file_path)
+          ? [`${a.file_path}.p1.jpg`, `${a.file_path}.p2.jpg`]
+          : IMAGE_EXT.test(a.file_path) ? [a.file_path] : []);
     }
     if (attachPaths.length === 0 && app.file_path && IMAGE_EXT.test(app.file_path)) {
       attachPaths = [app.file_path];
     }
     for (const p of attachPaths) {
+      if (imageDataUrls.length >= 4) break;
       const d = await toDataUrl(p);
       if (d) imageDataUrls.push(d);
     }
