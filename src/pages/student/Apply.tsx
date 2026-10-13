@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Download, Upload, FileSpreadsheet, ImagePlus, Trash2, AlertTriangle, Loader2, Send } from "lucide-react";
+import { Download, Upload, FileSpreadsheet, ImagePlus, FileText, Trash2, AlertTriangle, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { toastError } from "@/lib/errors";
 import { sha256Hex as sha256OfFile } from "@/lib/fileHash";
@@ -26,7 +26,7 @@ import { buildAchievementFingerprint } from "@/lib/keywordFingerprint";
 const BUCKET = "application-files";
 const MAX_IMAGES = 20;
 const MAX_SIZE = 10 * 1024 * 1024;
-const IMG_RE = /\.(png|jpe?g|webp|gif|bmp)$/i;
+const PDF_RE = /\.pdf$/i;
 
 type AttachmentDraft = {
   id: string;
@@ -185,8 +185,8 @@ export default function Apply() {
     if (!files) return;
     const next = [...attachments];
     for (const f of Array.from(files)) {
-      if (next.length >= MAX_IMAGES) { toast.error(`最多上传 ${MAX_IMAGES} 张佐证图片`); break; }
-      if (!IMG_RE.test(f.name) && !f.type.startsWith("image/")) { toast.error(`${f.name} 不是图片文件`); continue; }
+      if (next.length >= MAX_IMAGES) { toast.error(`最多上传 ${MAX_IMAGES} 份佐证材料`); break; }
+      if (!PDF_RE.test(f.name) || (f.type && f.type !== "application/pdf")) { toast.error(`${f.name} 不是 PDF 文件，佐证材料仅支持 PDF 格式`); continue; }
       if (f.size > MAX_SIZE) { toast.error(`${f.name} 超过 10MB 限制`); continue; }
       let hash: string | null = null;
       try { hash = await sha256OfFile(f); } catch { /* 忽略 */ }
@@ -196,7 +196,7 @@ export default function Apply() {
       };
       // 本批次内查重
       if (hash && next.some((a) => a.hash === hash)) {
-        toast.error(`${f.name} 与已选图片重复`);
+        toast.error(`${f.name} 与已选文件重复`);
         continue;
       }
       // 全库查重：该图是否已被任何申请使用
@@ -204,13 +204,13 @@ export default function Apply() {
         const { data: used } = await supabase
           .from("application_attachments").select("id").eq("file_hash", hash).limit(1);
         if (used && used.length > 0) {
-          toast.error(`「${f.name}」已被提交过，请勿重复使用同一张佐证图片`);
+          toast.error(`「${f.name}」已被提交过，请勿重复使用同一份佐证材料`);
           continue;
         }
         const { data: used2 } = await supabase
           .from("applications").select("id").eq("file_hash", hash).limit(1);
         if (used2 && used2.length > 0) {
-          toast.error(`「${f.name}」已被提交过，请勿重复使用同一张佐证图片`);
+          toast.error(`「${f.name}」已被提交过，请勿重复使用同一份佐证材料`);
           continue;
         }
       }
@@ -234,7 +234,7 @@ export default function Apply() {
 
   const submit = async () => {
     if (!user || !items || !formFile) return;
-    if (attachments.length === 0) { toast.error("请至少上传 1 张佐证材料图片"); return; }
+    if (attachments.length === 0) { toast.error("请至少上传 1 份 PDF 佐证材料"); return; }
     setSubmitting(true);
     try {
       // 同一学生已通过的「成果+级别」拦截（软提示交给 DB 守卫兜底）
@@ -272,7 +272,7 @@ export default function Apply() {
           const a = attachments[i];
           const p = `${user.id}/ev-${stamp}-${i}-${a.file.name.replace(/[^\w.\-一-龥]/g, "_")}`;
           const { error } = await supabase.storage.from(BUCKET).upload(p, a.file);
-          if (error) throw new Error(`第 ${i + 1} 张佐证材料上传失败，请重试`);
+          if (error) throw new Error(`第 ${i + 1} 份佐证材料上传失败，请重试`);
           uploadedPaths.push(p);
           ensureStay();
           uploaded.push({ file_path: p, file_name: a.file.name, file_hash: a.hash });
@@ -339,7 +339,7 @@ export default function Apply() {
               currentStep={items ? (attachments.length ? 2 : 1) : 0}
               steps={[
                 { label: "下载并填写申请表", description: "按模板逐条填写成果" },
-                { label: "上传申请表与佐证", description: "Excel + 图片" },
+                { label: "上传申请表与佐证", description: "Excel + PDF" },
                 { label: "提交申请", description: "学分以教师认定为准" },
 
               ]}
@@ -399,7 +399,7 @@ export default function Apply() {
               onChange={(e) => onPickForm(e.target.files?.[0] ?? null)}
             />
             <input
-              ref={imgInputRef} type="file" accept="image/*" multiple className="hidden"
+              ref={imgInputRef} type="file" accept=".pdf,application/pdf" multiple className="hidden"
               onChange={(e) => onPickImages(e.target.files)}
             />
 
@@ -472,15 +472,15 @@ export default function Apply() {
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" onClick={() => imgInputRef.current?.click()}>
-                  <ImagePlus className="mr-2 h-4 w-4" /> 添加佐证图片（{attachments.length}/{MAX_IMAGES}）
+                  <ImagePlus className="mr-2 h-4 w-4" /> 添加佐证材料 PDF（{attachments.length}/{MAX_IMAGES}）
                 </Button>
-                <span className="text-xs text-muted-foreground">证书、获奖文件、证明等拍照或截图，每张 ≤10MB；同一张图片不能重复提交</span>
+                <span className="text-xs text-muted-foreground">仅支持 PDF 格式（证书、获奖文件、证明等可扫描或导出为 PDF），每份 ≤10MB；同一文件不能重复提交</span>
               </div>
               {attachments.length > 0 && (
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                   {attachments.map((a) => (
                     <div key={a.id} className="group relative aspect-[4/3] overflow-hidden rounded-md border">
-                      <img src={a.preview} alt={a.file.name} className="h-full w-full object-cover" />
+                      <a href={a.preview} target="_blank" rel="noreferrer" className="flex h-full flex-col items-center justify-center gap-1 p-2 text-muted-foreground"><FileText className="h-6 w-6" /><span className="line-clamp-2 break-all text-center text-xs">{a.file.name}</span></a>
                       <button
                         type="button"
                         onClick={() => removeAttachment(a.id)}
