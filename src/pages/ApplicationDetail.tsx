@@ -355,7 +355,7 @@ const ApplicationDetail = () => {
     if (
       decision === "approved" &&
       (!app.aigc_status || app.aigc_status === "pending") &&
-      /\.(png|jpe?g|webp|gif|bmp)$/i.test(String((app as any).file_path ?? ""))
+      /\.(png|jpe?g|webp|gif|bmp|pdf)$/i.test(String((app as any).file_path ?? ""))
     ) {
       try {
         await supabase.functions.invoke("aigc-detect", { body: { application_id: app.id } });
