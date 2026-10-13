@@ -275,15 +275,21 @@ export default function Apply() {
           if (error) throw new Error(`第 ${i + 1} 份佐证材料上传失败，请重试`);
           uploadedPaths.push(p);
           ensureStay();
-          // 渲染为图片供自动核对；失败不影响提交（老师仍可人工查看 PDF）
+          // 渲染为图片供自动核对；失败重试一次，仍失败不阻塞提交（老师可人工查看 PDF），但明确提示
+          let pages: Blob[] = [];
           try {
-            const pages = await renderPdfPages(a.file);
-            for (let n = 0; n < pages.length; n++) {
-              const pp = pdfPreviewPath(p, n + 1);
-              const { error: pe } = await supabase.storage.from(BUCKET).upload(pp, pages[n], { contentType: "image/jpeg" });
-              if (!pe) uploadedPaths.push(pp);
-            }
-          } catch { /* ignore */ }
+            pages = await renderPdfPages(a.file);
+          } catch {
+            try { pages = await renderPdfPages(a.file); } catch { pages = []; }
+          }
+          if (pages.length === 0) {
+            toast.warning(`「${a.file.name}」无法生成核对图片，该份材料将由老师人工查看`);
+          }
+          for (let n = 0; n < pages.length; n++) {
+            const pp = pdfPreviewPath(p, n + 1);
+            const { error: pe } = await supabase.storage.from(BUCKET).upload(pp, pages[n], { contentType: "image/jpeg" });
+            if (!pe) uploadedPaths.push(pp);
+          }
           ensureStay();
           uploaded.push({ file_path: p, file_name: a.file.name, file_hash: a.hash });
         }

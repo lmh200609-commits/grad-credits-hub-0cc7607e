@@ -4,7 +4,7 @@ import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
-export const PDF_PREVIEW_PAGES = 2;
+export const PDF_PREVIEW_PAGES = 4;
 /** 预览图路径：<pdf路径>.p<页码>.jpg */
 export const pdfPreviewPath = (pdfPath: string, page: number) => `${pdfPath}.p${page}.jpg`;
 /** 预览图对应的 PDF 原件路径；不是预览图则返回 null */
