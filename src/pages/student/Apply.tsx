@@ -259,7 +259,7 @@ export default function Apply() {
       const ensureStay = () => { if (leftPageRef.current) throw new Error("已离开页面，本次提交已取消"); };
       try {
         // 1) 上传申请表
-        const formPath = `${user.id}/form-${stamp}-${formFile.name.replace(/[^\w.\-一-龥]/g, "_")}`;
+        const formPath = `${user.id}/form-${stamp}-${formFile.name.replace(/[^A-Za-z0-9.\-]/g, "_")}`;
         const { error: formErr } = await supabase.storage.from(BUCKET).upload(formPath, formFile);
         if (formErr) throw formErr;
         uploadedPaths.push(formPath);
@@ -270,7 +270,7 @@ export default function Apply() {
         const uploaded: { file_path: string; file_name: string; file_hash: string | null }[] = [];
         for (let i = 0; i < attachments.length; i++) {
           const a = attachments[i];
-          const p = `${user.id}/ev-${stamp}-${i}-${a.file.name.replace(/[^\w.\-一-龥]/g, "_")}`;
+          const p = `${user.id}/ev-${stamp}-${i}-${a.file.name.replace(/[^A-Za-z0-9.\-]/g, "_")}`;
           const { error } = await supabase.storage.from(BUCKET).upload(p, a.file);
           if (error) throw new Error(`第 ${i + 1} 份佐证材料上传失败，请重试`);
           uploadedPaths.push(p);
