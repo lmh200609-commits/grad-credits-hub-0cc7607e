@@ -3,9 +3,13 @@
 ## 问题 1：服务器上已有 Supabase，要删掉重装吗？
 不用删，也不用重新下载。只需要**清空它的数据库**，再导入云端数据：
 - 程序、配置、密钥（.env）全部保留；**不要再运行 generate-keys.sh**，否则密钥会变。
-- 清空数据库的做法：1Panel 终端执行
-  `cd /root/supabase-project && docker compose down`，
-  然后在 1Panel 文件里删除 `/root/supabase-project/volumes/db/data` 文件夹，再 `docker compose up -d`。
+- 清空数据库分 3 小步（相当于"关机 → 删掉旧数据 → 开机"）：
+  1. **关掉 Supabase**：1Panel → 终端，粘贴下面一行回车，等它显示一串 Removed / Stopped 结束：
+     `cd /root/supabase-project && docker compose down`
+  2. **删掉旧数据**：1Panel → 文件 → 依次进入 root → supabase-project → volumes → db，找到名叫 **data** 的文件夹，勾选 → 删除。（只删 data 这一个文件夹，旁边的其他文件不要动。）
+  3. **重新打开 Supabase**：回到 1Panel → 终端，粘贴下面一行回车：
+     `cd /root/supabase-project && docker compose up -d`
+     等 1~2 分钟，Supabase 会自动生成一个全新的空数据库，然后就可以导入云端数据了。
 - 原因：旧数据库里还留着上次的表结构，直接导入会大量冲突报错。
 
 因为你之前装过，原文档第 1~6 步、第 9 步（装 CLI）基本都可跳过，只需核对 .env 里的地址和密钥是否还在。
