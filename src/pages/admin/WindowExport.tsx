@@ -239,9 +239,32 @@ export default function WindowExport() {
           path: a.file_path,
           who: `${r.full_name} 的佐证材料${i + 1}`,
         });
+        names.set(`${r.id}|${a.file_path}`, `${folder}/${name}`);
       });
     }
-    return tasks;
+    return { tasks, names };
+  };
+
+  /** 导出压缩包内的「佐证清单.xlsx」：一行一份材料，方便统计与管理 */
+  const buildSummaryBlob = (targets: Row[], names: Map<string, string>): Blob => {
+    const header = ["学号", "姓名", "班级", "材料类型", "证书名称", "认定学分", "审核结果", "对应文件"];
+    const aoa: (string | number)[][] = [header];
+    for (const r of targets) {
+      const info = [r.student_no || "无学号", r.full_name, r.class_name || "未分班", STATUS_LABEL[r.status] ?? r.status];
+      if (r.form_file_path) {
+        aoa.push([...info.slice(0, 3), "申请表", "创新实践学分认定申请表", r.final_credit ?? r.claimed_credit ?? "", info[3], names.get(`${r.id}|form`) ?? ""]);
+      }
+      for (const a of r.attachments) {
+        const cert = a.cert_name?.trim() || "旧数据·无名称";
+        aoa.push([...info.slice(0, 3), "佐证材料", cert, a.claimed_credit ?? "", info[3], names.get(`${r.id}|${a.file_path}`) ?? ""]);
+      }
+    }
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [{ wch: 14 }, { wch: 10 }, { wch: 16 }, { wch: 10 }, { wch: 32 }, { wch: 10 }, { wch: 12 }, { wch: 44 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "佐证清单");
+    const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    return new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   };
 
   const runTasks = async (tasks: ExportTask[]) => {
