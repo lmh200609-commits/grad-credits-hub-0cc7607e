@@ -106,9 +106,11 @@ type RunOptions = {
   tasks: ExportTask[];
   signal?: AbortSignal;
   onProgress?: (p: ExportProgress) => void;
+  /** 直接放进压缩包根目录的附加文件（如清单表），不计入任务总数 */
+  extraFiles?: { name: string; content: Blob }[];
 };
 
-export async function runZipExport({ bucket, rootName, tasks, signal, onProgress }: RunOptions) {
+export async function runZipExport({ bucket, rootName, tasks, signal, onProgress, extraFiles }: RunOptions) {
   const started = Date.now();
   const total = tasks.length;
   let done = 0;
@@ -150,6 +152,13 @@ export async function runZipExport({ bucket, rootName, tasks, signal, onProgress
   let volBytes = 0;
   let volFiles = 0;
   const volumeNames: string[] = [];
+
+  // 附加文件（清单表等）放进第一卷的根目录
+  for (const f of extraFiles ?? []) {
+    root.file(f.name, f.content, zipOptionsFor(f.name));
+    volBytes += f.content.size;
+    volFiles += 1;
+  }
 
   const report = () => {
     const elapsedMs = Date.now() - started;

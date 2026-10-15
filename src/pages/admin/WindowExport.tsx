@@ -16,6 +16,7 @@ import { ArrowLeft, Download, Loader2, RotateCcw, X } from "lucide-react";
 import { toastError } from "@/lib/errors";
 import { deserializeItems } from "@/lib/parseForm";
 import { runZipExport, checkStorageReachable, ExportAborted, type ExportTask, type ExportProgress } from "@/lib/zipExport";
+import * as XLSX from "xlsx";
 
 const BUCKET = "application-files";
 
@@ -40,7 +41,7 @@ type Row = {
   student_no: string;
   full_name: string;
   class_name: string;
-  attachments: { file_path: string; file_name: string | null; sort_order: number; cert_name: string | null }[];
+  attachments: { file_path: string; file_name: string | null; sort_order: number; cert_name: string | null; claimed_credit: number | null }[];
 };
 
 const safe = (s: string) => (s || "").replace(/[/\\:*?"<>|\r\n]+/g, "_").trim() || "未命名";
@@ -130,7 +131,7 @@ export default function WindowExport() {
         supabase.from("profiles").select("user_id,full_name,student_no,class_name").in("user_id", studentIds),
         supabase
           .from("application_attachments")
-          .select("application_id,file_path,file_name,sort_order,cert_name")
+          .select("application_id,file_path,file_name,sort_order,cert_name,claimed_credit")
           .in("application_id", appIds)
           .order("sort_order", { ascending: true }),
       ]);
@@ -139,7 +140,7 @@ export default function WindowExport() {
       const aMap = new Map<string, Row["attachments"]>();
       for (const a of atts ?? []) {
         const arr = aMap.get(a.application_id) ?? [];
-        arr.push({ file_path: a.file_path, file_name: a.file_name, sort_order: a.sort_order ?? 0, cert_name: (a as { cert_name?: string | null }).cert_name ?? null });
+        arr.push({ file_path: a.file_path, file_name: a.file_name, sort_order: a.sort_order ?? 0, cert_name: (a as { cert_name?: string | null }).cert_name ?? null, claimed_credit: (a as { claimed_credit?: number | null }).claimed_credit ?? null });
         aMap.set(a.application_id, arr);
       }
 
@@ -195,8 +196,9 @@ export default function WindowExport() {
     setSelected(next);
   };
 
-  const buildTasks = (targets: Row[]): ExportTask[] => {
+  const buildTasks = (targets: Row[]): { tasks: ExportTask[]; names: Map<string, string> } => {
     const tasks: ExportTask[] = [];
+    const names = new Map<string, string>();
     const usedNames = new Map<string, number>();
     const perStudentSeq = new Map<string, number>();
 
@@ -209,13 +211,15 @@ export default function WindowExport() {
       const suffix = seq > 1 ? `(${seq})` : "";
 
       if (r.form_file_path) {
+        const fname = `${safe(r.student_no || "无学号")}-创新实践学分认定申请表${suffix}${extOf(r.form_file_path) || ".xlsx"}`;
         tasks.push({
           folder,
           group: folder,
-          name: `${safe(r.student_no || "无学号")}-创新实践学分认定申请表${suffix}${extOf(r.form_file_path) || ".xlsx"}`,
+          name: fname,
           path: r.form_file_path,
           who: `${r.full_name} 的申请表`,
         });
+        names.set(`${r.id}|form`, `${folder}/${fname}`);
       }
       r.attachments.forEach((a, i) => {
         const key = `${folder}/佐证`;
@@ -235,12 +239,35 @@ export default function WindowExport() {
           path: a.file_path,
           who: `${r.full_name} 的佐证材料${i + 1}`,
         });
+        names.set(`${r.id}|${a.file_path}`, `${folder}/${name}`);
       });
     }
-    return tasks;
+    return { tasks, names };
   };
 
-  const runTasks = async (tasks: ExportTask[]) => {
+  /** 导出压缩包内的「佐证清单.xlsx」：一行一份材料，方便统计与管理 */
+  const buildSummaryBlob = (targets: Row[], names: Map<string, string>): Blob => {
+    const header = ["学号", "姓名", "班级", "材料类型", "证书名称", "认定学分", "审核结果", "对应文件"];
+    const aoa: (string | number)[][] = [header];
+    for (const r of targets) {
+      const info = [r.student_no || "无学号", r.full_name, r.class_name || "未分班", STATUS_LABEL[r.status] ?? r.status];
+      if (r.form_file_path) {
+        aoa.push([...info.slice(0, 3), "申请表", "创新实践学分认定申请表", r.final_credit ?? r.claimed_credit ?? "", info[3], names.get(`${r.id}|form`) ?? ""]);
+      }
+      for (const a of r.attachments) {
+        const cert = a.cert_name?.trim() || "旧数据·无名称";
+        aoa.push([...info.slice(0, 3), "佐证材料", cert, a.claimed_credit ?? "", info[3], names.get(`${r.id}|${a.file_path}`) ?? ""]);
+      }
+    }
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [{ wch: 14 }, { wch: 10 }, { wch: 16 }, { wch: 10 }, { wch: 32 }, { wch: 10 }, { wch: 12 }, { wch: 44 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "佐证清单");
+    const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    return new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  };
+
+  const runTasks = async (tasks: ExportTask[], extraFiles?: { name: string; content: Blob }[]) => {
     if (!win) return;
     if (tasks.length === 0) return toast.error("所选申请没有可导出的文件");
 
@@ -263,6 +290,7 @@ export default function WindowExport() {
         tasks,
         signal: ac.signal,
         onProgress: setProgress,
+        extraFiles,
       });
       setFailed(res.failures);
       if (res.failures.length > 0) {
@@ -282,9 +310,9 @@ export default function WindowExport() {
   const doExport = async () => {
     const targets = rows.filter((r) => selected.has(r.id));
     if (targets.length === 0) return toast.error("请先勾选要导出的学生");
-    const tasks = buildTasks(targets);
+    const { tasks, names } = buildTasks(targets);
     if (tasks.length > 400) toast.info("材料较多，导出会自动分卷，请保持页面打开");
-    await runTasks(tasks);
+    await runTasks(tasks, [{ name: "佐证清单.xlsx", content: buildSummaryBlob(targets, names) }]);
   };
 
   const retryFailed = () => void runTasks(failed);
