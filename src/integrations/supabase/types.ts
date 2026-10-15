@@ -217,6 +217,8 @@ export type Database = {
       application_attachments: {
         Row: {
           application_id: string
+          cert_name: string | null
+          claimed_credit: number | null
           created_at: string
           file_hash: string | null
           file_name: string | null
@@ -228,6 +230,8 @@ export type Database = {
         }
         Insert: {
           application_id: string
+          cert_name?: string | null
+          claimed_credit?: number | null
           created_at?: string
           file_hash?: string | null
           file_name?: string | null
@@ -239,6 +243,8 @@ export type Database = {
         }
         Update: {
           application_id?: string
+          cert_name?: string | null
+          claimed_credit?: number | null
           created_at?: string
           file_hash?: string | null
           file_name?: string | null
