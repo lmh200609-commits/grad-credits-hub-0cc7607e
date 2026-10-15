@@ -9,7 +9,7 @@ const corsHeaders = {
 type Msg = { role: "user" | "assistant" | "system" | "tool"; content: string; tool_call_id?: string; name?: string; tool_calls?: any[] };
 import { normalizeMarkdown, toSections, shouldPolish, callPolish } from "../_shared/format-answer.ts";
 
-const SYSTEM_PROMPT = `你是「教师/管理员工作助手」，仅为学校学分认定系统的教师与管理员服务。
+const SYSTEM_PROMPT = `你是「教师/管理员工作助手」，仅为本科生创新实践学分认定系统的教师与管理员服务。
 
 【你的能力】
 你可以调用以下工具完成用户的指令：

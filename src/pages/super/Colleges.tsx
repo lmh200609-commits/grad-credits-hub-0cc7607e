@@ -28,7 +28,7 @@ type College = {
   active: boolean;
 };
 
-const emptyForm = { name: "", system_title: "学分认证系统" };
+const emptyForm = { name: "", system_title: "本科生创新实践学分认定系统" };
 
 const Colleges = () => {
   const [rows, setRows] = useState<College[]>([]);
@@ -67,7 +67,7 @@ const Colleges = () => {
     setSaving(true);
     const base = {
       name: form.name.trim(),
-      system_title: form.system_title.trim() || "学分认证系统",
+      system_title: form.system_title.trim() || "本科生创新实践学分认定系统",
     };
     const { error } = editing
       ? await supabase.from("colleges").update(base).eq("id", editing.id)

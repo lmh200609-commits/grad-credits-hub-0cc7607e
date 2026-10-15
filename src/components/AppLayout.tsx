@@ -165,9 +165,9 @@ const AppSidebar = () => {
         {!collapsed && (
           <div className="min-w-0 flex-1 leading-tight text-white">
             <div className="truncate text-sm font-semibold">
-              {college?.short_name || college?.name || "学分认证系统"}
+              {college?.short_name || college?.name || "本科生创新实践学分认定系统"}
             </div>
-            <div className="truncate text-[11px] text-white/75">学分认证系统</div>
+            <div className="truncate text-[11px] text-white/75">本科生创新实践学分认定系统</div>
           </div>
         )}
       </div>
@@ -296,7 +296,7 @@ const AppLayout = ({ children }: { children: ReactNode }) => {
                 className="truncate font-semibold"
                 style={{ color: "hsl(var(--brand-strong))" }}
               >
-                {college?.system_title ?? "学分认证系统"}
+                {college?.system_title ?? "本科生创新实践学分认定系统"}
               </span>
               {currentTitle && (
                 <>
