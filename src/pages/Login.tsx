@@ -10,8 +10,21 @@ import { toast } from "@/hooks/use-toast";
 import { loginSchema, type LoginInput } from "@/lib/schemas";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import loginBg from "@/assets/login-bg.jpg";
+import { supabase } from "@/integrations/supabase/client";
 
 const accountToEmail = (account: string) => `${account}@admin.local`;
+
+// 仅在云端测试环境（Lovable 预览 / 本机开发）显示一键登录
+const IS_TEST_ENV =
+  (import.meta.env.VITE_SUPABASE_URL ?? "").includes("eceqokilpppnwtfzgbvq") &&
+  /(lovable\.app|lovableproject\.com|localhost)$/.test(window.location.hostname);
+const TEST_PASSWORD = "Test12345";
+const TEST_ACCOUNTS = [
+  { account: "test_student", label: "测试学生" },
+  { account: "test_teacher", label: "测试老师" },
+  { account: "test_admin", label: "测试管理员" },
+  { account: "test_super", label: "测试超管" },
+];
 
 const Login = () => {
   const { signIn, user, loading } = useAuth();
@@ -98,6 +111,25 @@ const Login = () => {
               账号由管理员统一导入，本系统不支持自助注册
             </p>
           </form>
+          {IS_TEST_ENV && (
+            <div className="space-y-2 border-t pt-3">
+              <p className="text-center text-xs text-muted-foreground">测试环境 · 一键登录（学校服务器上不显示）</p>
+              <div className="grid grid-cols-2 gap-2">
+                {TEST_ACCOUNTS.map((t) => (
+                  <Button key={t.account} type="button" variant="outline" size="sm" disabled={submitting}
+                    onClick={async () => {
+                      setSubmitting(true);
+                      const { error } = await supabase.functions.invoke("test-accounts");
+                      setSubmitting(false);
+                      if (error) { toast({ title: "测试账号准备失败", variant: "destructive" }); return; }
+                      await doSignIn(t.account, TEST_PASSWORD);
+                    }}>
+                    {t.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
       </div>
