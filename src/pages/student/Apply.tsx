@@ -560,7 +560,7 @@ export default function Apply() {
               <div className="space-y-1"><Label>学号</Label><Input value={studentNo} disabled /></div>
               <div className="space-y-1"><Label>证书名称</Label><Input value={evCert} onChange={(e) => setEvCert(e.target.value)} placeholder="如：助理国际贸易师" /></div>
               <div className="space-y-1"><Label>认定学分</Label><Input type="number" min={0} step={0.5} value={evCredit} onChange={(e) => setEvCredit(e.target.value)} placeholder="如：2" /></div>
-              <div className="text-xs text-muted-foreground">保存后的文件名：{evidenceName(evCert || "证书名", evCredit || "学分")}</div>
+              <div className="text-xs text-muted-foreground">保存后的文件名：{evidenceName(evCert || "证书名", evCredit || "X")}</div>
             </div>
             <DialogFooter>
               <Button
