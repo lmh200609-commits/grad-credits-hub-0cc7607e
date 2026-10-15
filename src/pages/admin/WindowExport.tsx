@@ -16,6 +16,7 @@ import { ArrowLeft, Download, Loader2, RotateCcw, X } from "lucide-react";
 import { toastError } from "@/lib/errors";
 import { deserializeItems } from "@/lib/parseForm";
 import { runZipExport, checkStorageReachable, ExportAborted, type ExportTask, type ExportProgress } from "@/lib/zipExport";
+import * as XLSX from "xlsx";
 
 const BUCKET = "application-files";
 
@@ -40,7 +41,7 @@ type Row = {
   student_no: string;
   full_name: string;
   class_name: string;
-  attachments: { file_path: string; file_name: string | null; sort_order: number; cert_name: string | null }[];
+  attachments: { file_path: string; file_name: string | null; sort_order: number; cert_name: string | null; claimed_credit: number | null }[];
 };
 
 const safe = (s: string) => (s || "").replace(/[/\\:*?"<>|\r\n]+/g, "_").trim() || "未命名";
@@ -130,7 +131,7 @@ export default function WindowExport() {
         supabase.from("profiles").select("user_id,full_name,student_no,class_name").in("user_id", studentIds),
         supabase
           .from("application_attachments")
-          .select("application_id,file_path,file_name,sort_order,cert_name")
+          .select("application_id,file_path,file_name,sort_order,cert_name,claimed_credit")
           .in("application_id", appIds)
           .order("sort_order", { ascending: true }),
       ]);
@@ -139,7 +140,7 @@ export default function WindowExport() {
       const aMap = new Map<string, Row["attachments"]>();
       for (const a of atts ?? []) {
         const arr = aMap.get(a.application_id) ?? [];
-        arr.push({ file_path: a.file_path, file_name: a.file_name, sort_order: a.sort_order ?? 0, cert_name: (a as { cert_name?: string | null }).cert_name ?? null });
+        arr.push({ file_path: a.file_path, file_name: a.file_name, sort_order: a.sort_order ?? 0, cert_name: (a as { cert_name?: string | null }).cert_name ?? null, claimed_credit: (a as { claimed_credit?: number | null }).claimed_credit ?? null });
         aMap.set(a.application_id, arr);
       }
 
