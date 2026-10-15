@@ -196,8 +196,9 @@ export default function WindowExport() {
     setSelected(next);
   };
 
-  const buildTasks = (targets: Row[]): ExportTask[] => {
+  const buildTasks = (targets: Row[]): { tasks: ExportTask[]; names: Map<string, string> } => {
     const tasks: ExportTask[] = [];
+    const names = new Map<string, string>();
     const usedNames = new Map<string, number>();
     const perStudentSeq = new Map<string, number>();
 
@@ -210,13 +211,15 @@ export default function WindowExport() {
       const suffix = seq > 1 ? `(${seq})` : "";
 
       if (r.form_file_path) {
+        const fname = `${safe(r.student_no || "无学号")}-创新实践学分认定申请表${suffix}${extOf(r.form_file_path) || ".xlsx"}`;
         tasks.push({
           folder,
           group: folder,
-          name: `${safe(r.student_no || "无学号")}-创新实践学分认定申请表${suffix}${extOf(r.form_file_path) || ".xlsx"}`,
+          name: fname,
           path: r.form_file_path,
           who: `${r.full_name} 的申请表`,
         });
+        names.set(`${r.id}|form`, `${folder}/${fname}`);
       }
       r.attachments.forEach((a, i) => {
         const key = `${folder}/佐证`;
