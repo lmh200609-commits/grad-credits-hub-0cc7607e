@@ -9,6 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -27,6 +30,7 @@ const BUCKET = "application-files";
 const MAX_IMAGES = 20;
 const MAX_SIZE = 10 * 1024 * 1024;
 const PDF_RE = /\.pdf$/i;
+const safeName = (s: string) => (s || "").replace(/[/\\:*?"<>|\r\n]+/g, "_").trim();
 
 type AttachmentDraft = {
   id: string;
@@ -34,6 +38,8 @@ type AttachmentDraft = {
   hash: string | null;
   preview: string;
   dup: boolean;
+  certName: string;
+  credit: string;
 };
 
 export default function Apply() {
@@ -114,6 +120,19 @@ export default function Apply() {
 
   const formInputRef = useRef<HTMLInputElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
+  const [studentNo, setStudentNo] = useState("");
+  const [formDialog, setFormDialog] = useState(false);
+  const [evDialog, setEvDialog] = useState(false);
+  const [evCert, setEvCert] = useState("");
+  const [evCredit, setEvCredit] = useState("");
+  const [evChecking, setEvChecking] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("profiles").select("student_no").eq("user_id", user.id).maybeSingle()
+      .then(({ data }) => setStudentNo(data?.student_no ?? ""));
+  }, [user]);
+  const evidenceName = (cert: string, credit: string) => `${safeName(studentNo || "学号")}-${safeName(cert)}-${credit}分.pdf`;
+  const formFileName = `${safeName(studentNo || "学号")}-创新实践学分认定申请表.xlsx`;
 
   // 提交窗口检查
   useEffect(() => {
@@ -181,43 +200,33 @@ export default function Apply() {
     toast.success(`已解析出 ${res.items.length} 条认定条目`);
   };
 
-  const onPickImages = async (files: FileList | null) => {
-    if (!files) return;
-    const next = [...attachments];
-    for (const f of Array.from(files)) {
-      if (next.length >= MAX_IMAGES) { toast.error(`最多上传 ${MAX_IMAGES} 份佐证材料`); break; }
-      if (!PDF_RE.test(f.name) || (f.type && f.type !== "application/pdf")) { toast.error(`${f.name} 不是 PDF 文件，佐证材料仅支持 PDF 格式`); continue; }
-      if (f.size > MAX_SIZE) { toast.error(`${f.name} 超过 10MB 限制`); continue; }
+  const openNewEvidence = () => { setEvCert(""); setEvCredit(""); setEvDialog(true); };
+
+  const onPickEvidence = async (f: File | null) => {
+    if (imgInputRef.current) imgInputRef.current.value = "";
+    if (!f) return;
+    if (attachments.length >= MAX_IMAGES) { toast.error(`最多上传 ${MAX_IMAGES} 份佐证材料`); return; }
+    if (!PDF_RE.test(f.name) || (f.type && f.type !== "application/pdf")) { toast.error("佐证材料仅支持 PDF 格式"); return; }
+    if (f.size > MAX_SIZE) { toast.error("文件超过 10MB 限制"); return; }
+    setEvChecking(true);
+    try {
       let hash: string | null = null;
       try { hash = await sha256OfFile(f); } catch { /* 忽略 */ }
-      const draft: AttachmentDraft = {
-        id: newUuid(), file: f, hash,
-        preview: URL.createObjectURL(f), dup: false,
-      };
-      // 本批次内查重
-      if (hash && next.some((a) => a.hash === hash)) {
-        toast.error(`${f.name} 与已选文件重复`);
-        continue;
-      }
-      // 全库查重：该图是否已被任何申请使用
+      if (hash && attachments.some((a) => a.hash === hash)) { toast.error("这份文件已经添加过了"); return; }
       if (hash) {
-        const { data: used } = await supabase
-          .from("application_attachments").select("id").eq("file_hash", hash).limit(1);
-        if (used && used.length > 0) {
-          toast.error(`「${f.name}」已被提交过，请勿重复使用同一份佐证材料`);
-          continue;
-        }
-        const { data: used2 } = await supabase
-          .from("applications").select("id").eq("file_hash", hash).limit(1);
-        if (used2 && used2.length > 0) {
-          toast.error(`「${f.name}」已被提交过，请勿重复使用同一份佐证材料`);
-          continue;
-        }
+        const { data: used } = await supabase.from("application_attachments").select("id").eq("file_hash", hash).limit(1);
+        const { data: used2 } = await supabase.from("applications").select("id").eq("file_hash", hash).limit(1);
+        if ((used && used.length) || (used2 && used2.length)) { toast.error("这份文件已被提交过，请勿重复使用同一份佐证材料"); return; }
       }
-      next.push(draft);
+      setAttachments((prev) => [...prev, {
+        id: newUuid(), file: f, hash, preview: URL.createObjectURL(f), dup: false,
+        certName: evCert.trim(), credit: String(Number(evCredit)),
+      }]);
+      setEvDialog(false);
+      toast.success("已添加，可继续点「新增佐证」添加下一份");
+    } finally {
+      setEvChecking(false);
     }
-    setAttachments(next);
-    if (imgInputRef.current) imgInputRef.current.value = "";
   };
 
   const removeAttachment = (id: string) => {
@@ -259,23 +268,23 @@ export default function Apply() {
       const ensureStay = () => { if (leftPageRef.current) throw new Error("已离开页面，本次提交已取消"); };
       try {
         // 1) 上传申请表
-        const formPath = `${user.id}/form-${stamp}-${formFile.name.replace(/[^A-Za-z0-9.\-]/g, "_")}`;
+        const formExt = /\.xls$/i.test(formFile.name) ? ".xls" : ".xlsx";
+        const formPath = `${user.id}/form-${stamp}${formExt}`;
         const { error: formErr } = await supabase.storage.from(BUCKET).upload(formPath, formFile);
         if (formErr) throw formErr;
         uploadedPaths.push(formPath);
         ensureStay();
         pendingUploadsRef.current = uploadedPaths;
 
-        // 2) 上传佐证图片
-        const uploaded: { file_path: string; file_name: string; file_hash: string | null }[] = [];
+        // 2) 上传佐证 PDF
+        const uploaded: { file_path: string; file_name: string; file_hash: string | null; cert_name: string; claimed_credit: string }[] = [];
         for (let i = 0; i < attachments.length; i++) {
           const a = attachments[i];
-          const p = `${user.id}/ev-${stamp}-${i}-${a.file.name.replace(/[^A-Za-z0-9.\-]/g, "_")}`;
+          const p = `${user.id}/ev-${stamp}-${i}.pdf`;
           const { error } = await supabase.storage.from(BUCKET).upload(p, a.file);
           if (error) throw new Error(`第 ${i + 1} 份佐证材料上传失败，请重试`);
           uploadedPaths.push(p);
           ensureStay();
-          // 渲染为图片供自动核对；失败重试一次，仍失败不阻塞提交（老师可人工查看 PDF），但明确提示
           let pages: Blob[] = [];
           try {
             pages = await renderPdfPages(a.file);
@@ -283,7 +292,7 @@ export default function Apply() {
             try { pages = await renderPdfPages(a.file); } catch { pages = []; }
           }
           if (pages.length === 0) {
-            toast.warning(`「${a.file.name}」无法生成核对图片，该份材料将由老师人工查看`);
+            toast.warning(`「${evidenceName(a.certName, a.credit)}」无法生成核对图片，该份材料将由老师人工查看`);
           }
           for (let n = 0; n < pages.length; n++) {
             const pp = pdfPreviewPath(p, n + 1);
@@ -291,7 +300,7 @@ export default function Apply() {
             if (!pe) uploadedPaths.push(pp);
           }
           ensureStay();
-          uploaded.push({ file_path: p, file_name: a.file.name, file_hash: a.hash });
+          uploaded.push({ file_path: p, file_name: evidenceName(a.certName, a.credit), file_hash: a.hash, cert_name: a.certName, claimed_credit: a.credit });
         }
         if (uploaded.length !== attachments.length) throw new Error("佐证材料未全部上传成功，请重试");
 
@@ -389,14 +398,14 @@ export default function Apply() {
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
-                onClick={() => downloadFile("template", "/templates/申请表模板.xlsx", "创新实践学分认定申请表模板.xlsx")}
+                onClick={() => downloadFile("template", "/templates/申请表模板.xlsx", "长春财经学院本科生创新实践学分认定申请表.xlsx")}
                 disabled={downloading !== null}
               >
                 <Download className="mr-2 h-4 w-4" /> {downloading === "template" ? "正在下载…" : "下载《创新实践学分认定申请表》模板"}
               </Button>
               <Button
                 variant="ghost"
-                onClick={() => downloadFile("sample", "/templates/申请表示例.xlsx", "创新实践学分认定申请表（填写示例）.xlsx")}
+                onClick={() => downloadFile("sample", "/templates/申请表示例.xlsx", "样例：长春财经学院本科生创新实践学分认定申请表.xlsx")}
                 disabled={downloading !== null}
               >
                 <Download className="mr-2 h-4 w-4" /> {downloading === "sample" ? "正在下载…" : "下载填写示例表"}
@@ -407,24 +416,25 @@ export default function Apply() {
 
 
         {/* 第二步：上传 */}
-        <Card>
-          <CardHeader><CardTitle className="text-base">第二步：上传申请表与佐证材料</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <input
-              ref={formInputRef} type="file" accept=".xlsx,.xls" className="hidden"
-              onChange={(e) => onPickForm(e.target.files?.[0] ?? null)}
-            />
-            <input
-              ref={imgInputRef} type="file" accept=".pdf,application/pdf" multiple className="hidden"
-              onChange={(e) => onPickImages(e.target.files)}
-            />
+        <input
+          ref={formInputRef} type="file" accept=".xlsx,.xls" className="hidden"
+          onChange={(e) => onPickForm(e.target.files?.[0] ?? null)}
+        />
+        <input
+          ref={imgInputRef} type="file" accept=".pdf,application/pdf" className="hidden"
+          onChange={(e) => onPickEvidence(e.target.files?.[0] ?? null)}
+        />
 
+        {/* 第二步：申请表 */}
+        <Card>
+          <CardHeader><CardTitle className="text-base">第二步：填报并上传申请表</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" onClick={() => formInputRef.current?.click()} disabled={parsing}>
-                {parsing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
-                {formFile ? "重新选择申请表" : "上传填好的申请表（.xlsx）"}
+              <Button variant="outline" onClick={() => setFormDialog(true)} disabled={parsing}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                {formFile ? "重新填报申请表" : "填报申请表"}
               </Button>
-              {formFile && <span className="text-sm text-muted-foreground">{formFile.name}</span>}
+              {formFile && <span className="text-sm text-muted-foreground">{formFileName}</span>}
             </div>
 
             {parseError && (
@@ -466,7 +476,6 @@ export default function Apply() {
                               <Badge variant="outline" className="text-warning border-warning/40">偏低{std.credit != null ? `（标准 ${std.credit}）` : ""}</Badge>
                             )}
                             {compliance === "unknown" && <Badge variant="secondary">待核对</Badge>}
-
                           </TableCell>
                         </TableRow>
                       ))}
@@ -484,34 +493,85 @@ export default function Apply() {
                 )}
               </div>
             )}
-
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" onClick={() => imgInputRef.current?.click()}>
-                  <ImagePlus className="mr-2 h-4 w-4" /> 添加佐证材料 PDF（{attachments.length}/{MAX_IMAGES}）
-                </Button>
-                <span className="text-xs text-muted-foreground">仅支持 PDF 格式（证书、获奖文件、证明等可扫描或导出为 PDF），每份 ≤10MB；同一文件不能重复提交</span>
-              </div>
-              {attachments.length > 0 && (
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                  {attachments.map((a) => (
-                    <div key={a.id} className="group relative aspect-[4/3] overflow-hidden rounded-md border">
-                      <a href={a.preview} target="_blank" rel="noreferrer" className="flex h-full flex-col items-center justify-center gap-1 p-2 text-muted-foreground"><FileText className="h-6 w-6" /><span className="line-clamp-2 break-all text-center text-xs">{a.file.name}</span></a>
-                      <button
-                        type="button"
-                        onClick={() => removeAttachment(a.id)}
-                        className="absolute right-1 top-1 rounded-full bg-background/80 p-1 opacity-0 transition group-hover:opacity-100"
-                        aria-label="删除"
-                      >
-                        <Trash2 className="h-4 w-4 text-danger" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </CardContent>
         </Card>
+
+        {/* 第三步：佐证材料，逐条新增 */}
+        <Card>
+          <CardHeader><CardTitle className="text-base">第三步：逐份填报并上传佐证材料</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" onClick={openNewEvidence} disabled={attachments.length >= MAX_IMAGES}>
+                <ImagePlus className="mr-2 h-4 w-4" /> 新增佐证（{attachments.length}/{MAX_IMAGES}）
+              </Button>
+              <span className="text-xs text-muted-foreground">每份填写证书名称和认定学分，再上传 1 份 PDF（≤10MB）；上传完一份再点「新增佐证」添加下一份</span>
+            </div>
+            {attachments.length > 0 && (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader><TableRow>
+                    <TableHead className="w-8">#</TableHead>
+                    <TableHead>文件名</TableHead>
+                    <TableHead className="w-24 text-right">操作</TableHead>
+                  </TableRow></TableHeader>
+                  <TableBody>
+                    {attachments.map((a, i) => (
+                      <TableRow key={a.id}>
+                        <TableCell>{i + 1}</TableCell>
+                        <TableCell className="break-all">
+                          <a href={a.preview} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline-offset-2 hover:underline">
+                            <FileText className="h-4 w-4 shrink-0" />{evidenceName(a.certName, a.credit)}
+                          </a>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => removeAttachment(a.id)} aria-label="删除">
+                            <Trash2 className="h-4 w-4 text-danger" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Dialog open={formDialog} onOpenChange={setFormDialog}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>填报申请表</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1"><Label>学号</Label><Input value={studentNo} disabled /></div>
+              <div className="space-y-1"><Label>表格名称</Label><Input value="创新实践学分认定申请表" disabled /></div>
+              <div className="text-xs text-muted-foreground">保存后的文件名：{studentNo || "学号"}-创新实践学分认定申请表.xlsx</div>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => { setFormDialog(false); formInputRef.current?.click(); }} disabled={!studentNo || parsing}>
+                <Upload className="mr-2 h-4 w-4" /> 选择填好的申请表并上传
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={evDialog} onOpenChange={setEvDialog}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>新增佐证材料</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1"><Label>学号</Label><Input value={studentNo} disabled /></div>
+              <div className="space-y-1"><Label>证书名称</Label><Input value={evCert} onChange={(e) => setEvCert(e.target.value)} placeholder="如：助理国际贸易师" /></div>
+              <div className="space-y-1"><Label>认定学分</Label><Input type="number" min={0} step={0.5} value={evCredit} onChange={(e) => setEvCredit(e.target.value)} placeholder="如：2" /></div>
+              <div className="text-xs text-muted-foreground">保存后的文件名：{evidenceName(evCert || "证书名", evCredit || "学分")}</div>
+            </div>
+            <DialogFooter>
+              <Button
+                onClick={() => imgInputRef.current?.click()}
+                disabled={!studentNo || !evCert.trim() || evCredit === "" || Number.isNaN(Number(evCredit)) || evChecking}
+              >
+                {evChecking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />} 选择 PDF 并添加
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* 提交 */}
         <Card>

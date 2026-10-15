@@ -40,7 +40,7 @@ type Row = {
   student_no: string;
   full_name: string;
   class_name: string;
-  attachments: { file_path: string; file_name: string | null; sort_order: number }[];
+  attachments: { file_path: string; file_name: string | null; sort_order: number; cert_name: string | null }[];
 };
 
 const safe = (s: string) => (s || "").replace(/[/\\:*?"<>|\r\n]+/g, "_").trim() || "未命名";
@@ -130,7 +130,7 @@ export default function WindowExport() {
         supabase.from("profiles").select("user_id,full_name,student_no,class_name").in("user_id", studentIds),
         supabase
           .from("application_attachments")
-          .select("application_id,file_path,file_name,sort_order")
+          .select("application_id,file_path,file_name,sort_order,cert_name")
           .in("application_id", appIds)
           .order("sort_order", { ascending: true }),
       ]);
@@ -139,7 +139,7 @@ export default function WindowExport() {
       const aMap = new Map<string, Row["attachments"]>();
       for (const a of atts ?? []) {
         const arr = aMap.get(a.application_id) ?? [];
-        arr.push({ file_path: a.file_path, file_name: a.file_name, sort_order: a.sort_order ?? 0 });
+        arr.push({ file_path: a.file_path, file_name: a.file_name, sort_order: a.sort_order ?? 0, cert_name: (a as { cert_name?: string | null }).cert_name ?? null });
         aMap.set(a.application_id, arr);
       }
 
@@ -212,7 +212,7 @@ export default function WindowExport() {
         tasks.push({
           folder,
           group: folder,
-          name: `申请表${suffix}${extOf(r.form_file_path) || ".xlsx"}`,
+          name: `${safe(r.student_no || "无学号")}-创新实践学分认定申请表${suffix}${extOf(r.form_file_path) || ".xlsx"}`,
           path: r.form_file_path,
           who: `${r.full_name} 的申请表`,
         });
@@ -221,10 +221,17 @@ export default function WindowExport() {
         const key = `${folder}/佐证`;
         const n = (usedNames.get(key) ?? 0) + 1;
         usedNames.set(key, n);
+        let name = `佐证材料${n}${extOf(a.file_name || a.file_path)}`;
+        if (a.cert_name && a.file_name) {
+          const base = safe(a.file_name);
+          const cnt = (usedNames.get(`${folder}/${base}`) ?? 0) + 1;
+          usedNames.set(`${folder}/${base}`, cnt);
+          name = cnt > 1 ? base.replace(/\.pdf$/i, `(${cnt}).pdf`) : base;
+        }
         tasks.push({
           folder,
           group: folder,
-          name: `佐证材料${n}${extOf(a.file_name || a.file_path)}`,
+          name,
           path: a.file_path,
           who: `${r.full_name} 的佐证材料${i + 1}`,
         });

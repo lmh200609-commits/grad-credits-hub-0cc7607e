@@ -12,7 +12,7 @@ const corsHeaders = {
 
 type ChatMsg = { role: "user" | "assistant"; content: string };
 
-const SYSTEM_PROMPT = `你是「学分认证系统」管理员端「批量导入账号」页面的中文助手。
+const SYSTEM_PROMPT = `你是「本科生创新实践学分认定系统」管理员端「批量导入账号」页面的中文助手。
 请用简洁、友好的简体中文回答管理员的问题。除了批量导入本身，也可以回答本系统其他模块的常见操作问题。
 
 【输出风格 — 强制】
