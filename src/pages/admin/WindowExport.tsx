@@ -267,7 +267,7 @@ export default function WindowExport() {
     return new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   };
 
-  const runTasks = async (tasks: ExportTask[]) => {
+  const runTasks = async (tasks: ExportTask[], extraFiles?: { name: string; content: Blob }[]) => {
     if (!win) return;
     if (tasks.length === 0) return toast.error("所选申请没有可导出的文件");
 
@@ -290,6 +290,7 @@ export default function WindowExport() {
         tasks,
         signal: ac.signal,
         onProgress: setProgress,
+        extraFiles,
       });
       setFailed(res.failures);
       if (res.failures.length > 0) {
@@ -309,9 +310,9 @@ export default function WindowExport() {
   const doExport = async () => {
     const targets = rows.filter((r) => selected.has(r.id));
     if (targets.length === 0) return toast.error("请先勾选要导出的学生");
-    const tasks = buildTasks(targets);
+    const { tasks, names } = buildTasks(targets);
     if (tasks.length > 400) toast.info("材料较多，导出会自动分卷，请保持页面打开");
-    await runTasks(tasks);
+    await runTasks(tasks, [{ name: "佐证清单.xlsx", content: buildSummaryBlob(targets, names) }]);
   };
 
   const retryFailed = () => void runTasks(failed);
