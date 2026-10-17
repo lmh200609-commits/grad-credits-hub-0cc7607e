@@ -18,6 +18,8 @@ const accountToEmail = (account: string) => `${account}@admin.local`;
 const IS_TEST_ENV =
   (import.meta.env.VITE_SUPABASE_URL ?? "").includes("eceqokilpppnwtfzgbvq") &&
   /(lovable\.app|lovableproject\.com|localhost)$/.test(window.location.hostname);
+// 测试账号一键登录入口开关：需要时改为 true 即可恢复显示
+const SHOW_TEST_LOGIN: boolean = false;
 const TEST_PASSWORD = "Test12345";
 const TEST_ACCOUNTS = [
   { account: "test_student", label: "测试学生" },
@@ -111,7 +113,7 @@ const Login = () => {
               账号由管理员统一导入，本系统不支持自助注册
             </p>
           </form>
-          {IS_TEST_ENV && (
+          {SHOW_TEST_LOGIN && IS_TEST_ENV && (
             <div className="space-y-2 border-t pt-3">
               <p className="text-center text-xs text-muted-foreground">测试环境 · 一键登录（学校服务器上不显示）</p>
               <div className="grid grid-cols-2 gap-2">
