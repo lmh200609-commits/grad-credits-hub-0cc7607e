@@ -99,9 +99,13 @@ export default function Apply() {
   const downloadFile = useCallback(async (kind: "template" | "sample", path: string, name: string) => {
     setDownloading(kind);
     try {
-      const res = await fetch(path);
-      if (!res.ok) throw new Error(`下载失败（${res.status}）`);
+      const res = await fetch(path, { cache: "no-cache" });
+      if (!res.ok) throw new Error("模板文件缺失，请联系管理员");
       const blob = await res.blob();
+      const head = new Uint8Array(await blob.slice(0, 2).arrayBuffer());
+      if (blob.size < 100 || head[0] !== 0x50 || head[1] !== 0x4b) {
+        throw new Error("模板文件缺失，请联系管理员");
+      }
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
