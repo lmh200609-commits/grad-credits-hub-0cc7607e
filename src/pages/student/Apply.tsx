@@ -113,7 +113,7 @@ export default function Apply() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
     } catch (e) {
       toastError(e, "下载失败");
     } finally {
@@ -402,14 +402,14 @@ export default function Apply() {
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
-                onClick={() => downloadFile("template", "/templates/申请表模板.xlsx", "长春财经学院本科生创新实践学分认定申请表.xlsx")}
+                onClick={() => downloadFile("template", "/templates/application-template.xlsx", "长春财经学院本科生创新实践学分认定申请表.xlsx")}
                 disabled={downloading !== null}
               >
                 <Download className="mr-2 h-4 w-4" /> {downloading === "template" ? "正在下载…" : "下载《创新实践学分认定申请表》模板"}
               </Button>
               <Button
                 variant="ghost"
-                onClick={() => downloadFile("sample", "/templates/申请表示例.xlsx", "样例：长春财经学院本科生创新实践学分认定申请表.xlsx")}
+                onClick={() => downloadFile("sample", "/templates/application-sample.xlsx", "样例：长春财经学院本科生创新实践学分认定申请表.xlsx")}
                 disabled={downloading !== null}
               >
                 <Download className="mr-2 h-4 w-4" /> {downloading === "sample" ? "正在下载…" : "下载填写示例表"}
