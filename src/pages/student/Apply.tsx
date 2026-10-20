@@ -174,7 +174,7 @@ export default function Apply() {
   );
   const standardTotal = useMemo(() => {
     const nums = itemChecks.map((c) => c.std.credit).filter((n): n is number => n != null);
-    return nums.length ? nums.reduce((a, b) => a + b, 0) : null;
+    return nums.length && nums.length === itemChecks.length ? nums.reduce((a, b) => a + b, 0) : null;
   }, [itemChecks]);
   const complianceOverall = useMemo(() => {
     if (!itemChecks.length) return "unknown" as const;
@@ -396,7 +396,7 @@ export default function Apply() {
             <div className="text-sm text-muted-foreground space-y-1">
               <p>· 用 Excel / WPS 打开模板，按四个大类逐条填写：认定项目、成果名称、级别、本人排名、认定学分。</p>
               <p>· 不确定怎么填，可先下载「示例表」参考，示例表仅供查看，请勿直接提交。</p>
-              <p>· 「认定学分」请对照《创新实践学分认定办法》标准填写，教师审核时会据此核对。</p>
+              <p>· 「认定学分」请对照《长春财经学院创新实践学分认定标准》填写，教师审核时会据此核对。</p>
               <p>· 不要改动表头和「认定项目/成果名称/级别/排名/学分」列结构，以免影响教师审核。</p>
               <p>· 第二课堂活动（学术报告、培训等）填在「四、职业技能」大类，每 16 学时或 1 周记 1 学分。</p>
             </div>

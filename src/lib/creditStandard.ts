@@ -167,7 +167,7 @@ function lookupOnce(input: LookupInput, catalogs: Catalogs): StandardLookup {
       const leader = has(rank, "负责人", "个人", "独立");
       const first = has(rank, "第一参与");
       const slot = (l: number, f: number, o: number) => leader ? l : first ? f : o;
-      const prize = prizeOf(level + achieve);
+      const prize = prizeOf(input.level + achieve);
       if (has(input.level, "国")) {
         if (prize === 1) return ok(slot(10, 9, 8), `${basisHead}·国赛一等奖`);
         if (prize === 2) return ok(slot(8, 7, 6), `${basisHead}·国赛二等奖`);
@@ -210,11 +210,6 @@ function lookupOnce(input: LookupInput, catalogs: Catalogs): StandardLookup {
       if (prize === 1) return ok(slot3(6, null, 4) ?? 4, `${basisHead}·省部级B类一等奖`);
       if (prize === 2) return ok(slot3(5, null, 4) ?? 4, `${basisHead}·省部级B类二等奖`);
       if (prize === 3) return ok(slot3(4, null, 2) ?? 2, `${basisHead}·省部级B类三等奖`);
-    }
-    if (has(input.level, "省")) { // 未分 A/B 时按 A 类参考
-      if (prize === 1) return { credit: null, min: 6, max: 6, basis: `${basisHead}·省部级一等奖（A类6/B类6）`, matched: true };
-      if (prize === 2) return ok(slot3(5, null, 4) ?? 4, `${basisHead}·省部级二等奖`);
-      if (prize === 3) return { credit: null, min: 2, max: 4, basis: `${basisHead}·省部级三等奖（A类3-4/B类2-4）`, matched: true };
     }
     if (has(competitionLevel, "校")) {
       if (prize === 1) return ok(slot3(5, null, 4) ?? 4, `${basisHead}·校级一等奖`);
