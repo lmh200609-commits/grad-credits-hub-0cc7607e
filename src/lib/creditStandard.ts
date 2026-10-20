@@ -122,7 +122,9 @@ function lookupOnce(input: LookupInput, catalogs: Catalogs): StandardLookup {
       if (has(research, "国家级学会", "行业企业", "省教育厅", "市级纵向", "市级以上纵向") || (has(input.level, "市") && !has(research, "政府", "学会")))
         return ok(leader ? 8 : 6, `${basisHead}·市级以上/行业企业/省教育厅/国家级学会项目`);
       if (has(research, "学会")) return ok(leader ? 4 : 2, `${basisHead}·省级以上学会项目`);
-      if (has(input.level, "国家级", "省级") || has(research, "省级以上", "教育部", "政府部门", "政府委托"))
+      if ((has(research, "纵向") && has(research, "国家级", "省级", "省级以上")) ||
+          (has(research, "横向") && has(research, "政府")) ||
+          (has(research, "教育部") && has(research, "协同育人")))
         return ok(leader ? 10 : 8, `${basisHead}·省级以上/政府委托/教育部项目`);
       return { credit: null, min: 2, max: 10, basis: `${basisHead}·科研项目（2–10 分，视级别与角色）`, matched: true };
     }
@@ -136,7 +138,7 @@ function lookupOnce(input: LookupInput, catalogs: Catalogs): StandardLookup {
     if (has(proj, "专利", "著作权", "知识产权", "软件著作")) {
       if (missingRank(rank)) return { credit: null, min: 4, max: 6, matched: true, basis: `${basisHead}：署名排名待核对，第一署名单位须为长春财经学院` };
       const first = has(rank, "第一署名", "独立");
-      return ok(first ? 6 : 4, `${basisHead}·知识产权·${first ? "第一署名" : "其他成员"}`);
+      return ok(first ? 6 : 4, `${basisHead}·知识产权·${first ? "第一署名" : "其他成员"}（第一署名单位须为长春财经学院）`);
     }
     return fail;
   }
@@ -149,9 +151,9 @@ function lookupOnce(input: LookupInput, catalogs: Catalogs): StandardLookup {
       const leader = has(rank, "主持", "负责人");
       const first = has(rank, "第一参与");
       const slot = (l: number, f: number, o: number) => leader ? l : first ? f : o;
-      if (has(input.level, "国家级")) return ok(slot(6, 5, 4), `${basisHead}·大创国家级`);
-      if (has(input.level, "省级")) return ok(slot(5, 4, 2), `${basisHead}·大创省级`);
-      if (has(level, "校")) return ok(slot(2, 1, 1), `${basisHead}·大创校级`);
+      if (has(input.level, "国家级")) return ok(slot(6, 5, 4), `${basisHead}·大创国家级（须立项且顺利结题）`);
+      if (has(input.level, "省级")) return ok(slot(5, 4, 2), `${basisHead}·大创省级（须立项且顺利结题）`);
+      if (has(level, "校")) return ok(slot(2, 1, 1), `${basisHead}·大创校级（须立项且顺利结题）`);
       return { credit: null, min: 1, max: 6, basis: `${basisHead}·大创（1–6 分，视级别与角色）`, matched: true };
     }
     // 自主创业

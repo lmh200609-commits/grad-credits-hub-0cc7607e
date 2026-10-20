@@ -57,6 +57,9 @@ export async function parseApplicationForm(file: File | ArrayBuffer): Promise<Pa
 
   const items: FormItem[] = [];
   let category = "";
+  let previousProject = "";
+  let previousWasExample = false;
+  let veteranSection = false;
   let totalCredit: number | null = null;
 
   for (const row of grid) {
@@ -72,11 +75,35 @@ export async function parseApplicationForm(file: File | ArrayBuffer): Promise<Pa
     // 大类标题行：仅一个单元格有内容且匹配 序号、
     const nonEmpty = row.filter(Boolean);
     const sec = nonEmpty.length === 1 ? SECTION_RE.exec(nonEmpty[0]) : null;
-    if (sec) { category = sec[1].replace(/[:：].*$/, ""); continue; }
+    if (sec) {
+      category = sec[1].replace(/[:：].*$/, "");
+      previousProject = "";
+      previousWasExample = false;
+      veteranSection = /退出现役证书/.test(category);
+      continue;
+    }
+    // 退役表有独立六列表头，不能按普通成果列解析。
+    if (veteranSection) {
+      if (row.includes("证书编号") || row.includes("公民身份证号")) continue;
+      const [certificateNo, , enlistedAt, retiredAt, militaryRank, claimed] = row;
+      // 原模板中的星号证书编号只是示例，不能计入申请。
+      if (!certificateNo || /[*＊]/.test(certificateNo)) continue;
+      const parsedCredit = claimed ? Number(claimed.replace(/分$/, "").trim()) : null;
+      items.push({
+        index: items.length + 1, category, project: "退役证书",
+        achievement: certificateNo,
+        level: `${militaryRank || "未填写"}；入伍时间：${enlistedAt || "未填写"}；退出现役时间：${retiredAt || "未填写"}`,
+        rank: "个人",
+        credit: parsedCredit != null && Number.isFinite(parsedCredit) ? parsedCredit : null,
+      });
+      continue;
+    }
     // 列头行
     if (row.includes("认定项目") && row.includes("认定学分")) continue;
-    // 样例行：任何单元格含"样例"直接跳过
-    if (row.some((c) => c.includes("样例"))) continue;
+    // 合并项目单元格下的后续行继承项目；样例的连续行仍是样例。
+    if (row[1]) { previousProject = row[1]; previousWasExample = false; }
+    if (row.some((c) => c.includes("样例"))) { previousWasExample = true; continue; }
+    if (previousWasExample && !row[0] && !row[1]) continue;
     // 尾部说明行
     if (/填写说明|审核人|学院公章|系主任|分管院长|院部审核/.test(joined)) continue;
     // 抬头信息行（学院/专业班级/姓名/学号/成绩等级）
@@ -92,7 +119,7 @@ export async function parseApplicationForm(file: File | ArrayBuffer): Promise<Pa
     items.push({
       index: items.length + 1,
       category: category || "未分类",
-      project: project || "未填写",
+      project: project || previousProject || "未填写",
       achievement,
       level: level || "未填写",
       rank: rank || "未填写",

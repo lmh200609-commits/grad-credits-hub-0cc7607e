@@ -3,3 +3,5 @@
 - Keep deterministic credit comparisons in `src/lib/creditStandard.ts`, with document-based numeric regression tests; teacher and student views share this lookup to prevent differing references.
 - Keep the evaluator's official credit reference in a local function module, not a frontend import, because edge function deployments cannot import `src/`.
 - Serve workbook templates from `public/templates` with English paths and checked Blob downloads; school LAN deployments must work without external asset services.
+- Parse the retired-service block separately from ordinary achievement rows and exclude template examples, because its columns have different meanings.
+- Keep credit-finalization policy in the evaluator's local credit-reference module; filled workbook applications require teacher confirmation because browser-reported compliance is not authoritative.

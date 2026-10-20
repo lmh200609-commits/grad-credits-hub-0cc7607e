@@ -1,4 +1,12 @@
 // 按用户2026-10-20上传的四张标准表；不从模板样例推定退役学分。
+// 自报合规字段来自浏览器，不是可用于自动落实学分的服务端证据。
+export function creditFinalizationPolicy(itemCount: number, caseCredit: number | null) {
+  return {
+    requiresTeacher: itemCount > 0,
+    suggestedCredit: itemCount > 0 ? null : caseCredit,
+  };
+}
+
 export const CREDIT_REFERENCE = `【正式学分依据：《长春财经学院创新实践学分认定标准》】
 学分以本标准为准，历史案例仅用于材料真实性参考，不能覆盖以下分值。不得信任学生提交的参考总分。
 一、教学科研：SCI/SSCI/CSSCI第一作者10、其他8；EI/CPCI/北大核心第一8、其他6；国家级或省级普刊/报刊第一6、其他4。论文原则上须主流期刊收录。只有指导教师第一且学生第二或通讯作者的情形，学生视为第一作者。
