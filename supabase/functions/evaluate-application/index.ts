@@ -2,7 +2,7 @@
 // 明显篡改 / AI 生成痕迹 / 无关图片。其他内容（学分大小等）不严格校验。
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { getAiConfig, callChatCompletions } from "../_shared/ai-router.ts";
-import { CREDIT_REFERENCE } from "./credit-reference.ts";
+import { CREDIT_REFERENCE, creditFinalizationPolicy } from "./credit-reference.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -590,6 +590,12 @@ reasoning_short：一句话（≤60 字）给学生看，只点出"是否通过 
     // 优先使用 detected 匹配的案例；若与学生关键词派生的 candidateCase 不一致，强制走人工复核
     const effectiveCase = detectedCase ?? candidateCase;
     const detectedMismatch = hasDetection && candidateCase && detectedCase && detectedCase.id !== candidateCase.id;
+    const creditPolicy = creditFinalizationPolicy(claimedItems.length, effectiveCase?.awarded_credit ?? null);
+    if (creditPolicy.requiresTeacher && result.recommendation === "approve") {
+      result.recommendation = "review";
+      result.confidence = Math.min(Number(result.confidence ?? 0.65), 0.7);
+      overrideNotes.push("填表申请的学分及认定条件须由教师确认，不自动落实学生自报学分。");
+    }
 
     // 把 override notes 拼接到 reasoning 末尾，便于教师查看为什么被改判
     if (overrideNotes.length) {
@@ -627,9 +633,7 @@ reasoning_short：一句话（≤60 字）给学生看，只点出"是否通过 
     // 不再指向 rules 表；ai_matched_rule_id 写 null
     const matchedRuleId: string | null = null;
     // 填表申请以学生自报学分（合规时）为准；旧流程沿用案例学分
-    const suggestedCredit = claimedItems.length
-      ? (app.claimed_credit ?? null)
-      : (effectiveCase?.awarded_credit ?? null);
+    const suggestedCredit = creditPolicy.suggestedCredit;
 
     await admin.from("application_reviews").insert({
       application_id,
