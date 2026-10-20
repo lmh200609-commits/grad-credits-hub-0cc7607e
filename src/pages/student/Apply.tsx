@@ -25,6 +25,7 @@ import { lookupStandardCredit, checkCreditCompliance, COMPLIANCE_LABEL } from "@
 import { Catalogs, EMPTY_CATALOGS, loadCatalogs } from "@/lib/catalog";
 import { renderPdfPages, pdfPreviewPath, pdfPathOfPreview } from "@/lib/pdfToImages";
 import { buildAchievementFingerprint } from "@/lib/keywordFingerprint";
+import veteranTemplate from "@/assets/veteran-application-template.xlsx.asset.json";
 
 const BUCKET = "application-files";
 const MAX_IMAGES = 20;
@@ -93,10 +94,10 @@ export default function Apply() {
       } catch { /* ignore */ }
     })();
   }, [user]);
-  const [downloading, setDownloading] = useState<"template" | "sample" | null>(null);
+  const [downloading, setDownloading] = useState<"template" | "sample" | "veteran" | null>(null);
 
   // 通过 fetch + Blob 下载：兼容 Lovable 预览环境（直接 <a download> 会被预览拦截）
-  const downloadFile = useCallback(async (kind: "template" | "sample", path: string, name: string) => {
+  const downloadFile = useCallback(async (kind: "template" | "sample" | "veteran", path: string, name: string) => {
     setDownloading(kind);
     try {
       const res = await fetch(path, { cache: "no-cache" });
@@ -413,6 +414,13 @@ export default function Apply() {
                 disabled={downloading !== null}
               >
                 <Download className="mr-2 h-4 w-4" /> {downloading === "sample" ? "正在下载…" : "下载填写示例表"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => downloadFile("veteran", veteranTemplate.url, "退役复学用：长春财经学院本科生创新实践学分认定申请表.xlsx")}
+                disabled={downloading !== null}
+              >
+                <Download className="mr-2 h-4 w-4" /> {downloading === "veteran" ? "正在下载…" : "下载退役复学申请表"}
               </Button>
             </div>
           </CardContent>
