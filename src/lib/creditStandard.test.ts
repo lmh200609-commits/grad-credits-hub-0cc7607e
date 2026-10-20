@@ -85,4 +85,7 @@ describe("上传的四张学分认定标准表", () => {
   it("高于标准标记警告", () => expect(checkCreditCompliance(10, lookup("学科竞赛", "国家级B类", "一等奖", "个人"))).toBe("over"));
   it("低于标准标记偏低", () => expect(checkCreditCompliance(2, lookup("职业技能", "全国计算机等级证书", "二级", "独立"))).toBe("under"));
   it("退役证书没有规定分值", () => expect(lookup("退役", "退役证书", "下士", "个人").credit).toBeNull());
+  it("仅省级但项目类型不明不能推定10分", () => expect(lookup("教学科研", "教学科研项目", "省级", "项目主持人").credit).toBeNull());
+  it("仅国家级但项目类型不明不能推定8分", () => expect(lookup("教学科研", "教学科研项目", "国家级", "其他参与人").credit).toBeNull());
+  it("指导教师第一且学生通讯作者视为第一", () => expect(lookup("教学科研", "发表论文", "SCI", "指导教师第一作者，学生通讯作者").credit).toBe(10));
 });
