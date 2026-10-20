@@ -2,6 +2,7 @@
 // 明显篡改 / AI 生成痕迹 / 无关图片。其他内容（学分大小等）不严格校验。
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { getAiConfig, callChatCompletions } from "../_shared/ai-router.ts";
+import { CREDIT_REFERENCE } from "./credit-reference.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -115,7 +116,7 @@ Deno.serve(async (req) => {
 
     const { data: studentProfile } = await admin
       .from("profiles")
-      .select("full_name, student_no, department, class_name, id_card")
+      .select("full_name, student_no, department, class_name, id_card, major")
       .eq("user_id", app.student_id)
       .single();
 
@@ -220,7 +221,9 @@ Deno.serve(async (req) => {
 
 【认定范围参考】本科生创新实践学分的认定范围包括：科研成果（论文）、知识产权、科研训练（科研项目 / 大创项目）、学科竞赛、职业技能证书、创业实践、文体竞赛、第二课堂等。
 
-【参考依据】只以"历史人工通过案例库"作为佐证依据；不要把学校规则库作为唯一标准。
+【参考依据】历史人工通过案例库用于佐证材料参考；学分分值以以下正式认定标准为准。
+
+${CREDIT_REFERENCE}
 
 【语言要求 — 必须严格遵守】
 - 所有字段值（含 reasoning、reasoning_short、detected_*）必须使用简体中文。
@@ -283,7 +286,7 @@ reasoning_short：一句话（≤60 字）给学生看，只点出"是否通过 
 - application.claimed_items 是学生在《创新实践学分认定申请表》中逐条填报的条目（含大类/认定项目/成果名称/级别/本人排名/自报学分），后面的每张图片均为佐证材料。
 - 逐条比对：佐证图片上的成果名称、级别、姓名、排名是否与填报条目相符；任何一条找不到对应佐证或关键信息不符 → consistency_ok = false，并在 reasoning 中写明是第几条、差在哪。
 - 姓名/学号等身份信息以佐证图片为准与 student_profile 比对（identity 规则同上）。
-- 学分合规：以图片中识别到的真实级别与排名对照《长春财经学院创新实践学分认定办法》标准，判断学生自报学分（claimed_credit_total，参考标准 credit_standard_total）是否超标；超标或偏低都必须在 credit_compliance_note 中用中文写明，如「第 2 条自报 8 分，按国家级 B 类一等奖团队负责人标准应为 6 分」。无法判断填「待人工核定」。
+- 学分合规：以图片真实级别与排名对照上述《长春财经学院创新实践学分认定标准》，逐条独立判断，学生传入的credit_standard_total仅参考。超标或偏低在credit_compliance_note写明，如「第2条自报10分，国家级B类一等奖团队负责人标准为8分」。无法判断填「待人工核定」。仅学分差异不得将consistency_ok或logic_ok判为false；材料真实且只有学分差异/条件待核定时recommendation=review，由教师最终定分。
 - reasoning 结构改为：「逐条核验：第 1 条…；第 2 条…；身份核验：…；学分合规：…；结论：…」。
 - 系统不替你给学分建议；你的职责是核验真伪与信息相符性。` : "");
 
@@ -292,6 +295,7 @@ reasoning_short：一句话（≤60 字）给学生看，只点出"是否通过 
         name: studentProfile?.full_name ?? "未知",
         student_no: studentProfile?.student_no ?? "未知",
         department: studentProfile?.department ?? "未知",
+        major: studentProfile?.major ?? "未知",
         class_name: studentProfile?.class_name ?? "未知",
         id_card_masked: maskIdCard(studentProfile?.id_card) ?? "未提供",
         default_school: DEFAULT_SCHOOL,
