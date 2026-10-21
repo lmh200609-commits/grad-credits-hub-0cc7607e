@@ -13,8 +13,10 @@ export type FormItem = {
 };
 
 export type ParseResult =
-  | { ok: true; error?: null; items: FormItem[]; studentName: string | null; studentNo: string | null; totalCredit: number | null }
+  | { ok: true; error?: null; items: FormItem[]; studentName: string | null; studentNo: string | null; totalCredit: number | null; majorClass: string | null; gradeLevel: string | null }
   | { ok: false; error: string };
+
+const GRADE_LEVELS = ["优秀", "良好", "中等", "及格", "不及格"];
 
 const SECTION_RE = /^[一二三四五六七八九十]+[、.．]\s*(.+)$/;
 const HEADER_MARKS = ["认定项目", "认定成果名称", "认定级别", "本人排名", "认定学分"];
