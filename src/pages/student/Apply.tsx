@@ -21,7 +21,7 @@ import { toastError } from "@/lib/errors";
 import { sha256Hex as sha256OfFile } from "@/lib/fileHash";
 import { randomUUID as newUuid } from "@/lib/uuid";
 import { parseApplicationForm, serializeItems, type FormItem } from "@/lib/parseForm";
-import { lookupStandardCredit, checkCreditCompliance, COMPLIANCE_LABEL } from "@/lib/creditStandard";
+import { lookupStandardCredit, checkCreditCompliance, COMPLIANCE_LABEL, gradeOf } from "@/lib/creditStandard";
 import { Catalogs, EMPTY_CATALOGS, loadCatalogs } from "@/lib/catalog";
 import { renderPdfPages, pdfPreviewPath, pdfPathOfPreview } from "@/lib/pdfToImages";
 import { buildAchievementFingerprint } from "@/lib/keywordFingerprint";
@@ -202,6 +202,13 @@ export default function Apply() {
     setFormFile(f);
     setItems(res.items);
     toast.success(`已解析出 ${res.items.length} 条认定条目`);
+    if (res.gradeLevel) {
+      const claimed = res.items.reduce((s, it) => s + (it.credit ?? 0), 0);
+      const expected = gradeOf(claimed).label;
+      if (res.gradeLevel !== expected) {
+        toast.warning(`表中认定成绩等级填的是【${res.gradeLevel}】，按自报合计 ${claimed} 分应对应【${expected}】，请核对是否填错（最终以教师审核为准）`);
+      }
+    }
   };
 
   const openNewEvidence = () => { setEvCert(""); setEvCredit(""); setEvDialog(true); };
@@ -398,6 +405,7 @@ export default function Apply() {
               <p>· 「认定学分」请对照《长春财经学院创新实践学分认定标准》填写，教师审核时会据此核对。</p>
               <p>· 不要改动表头和「认定项目/成果名称/级别/排名/学分」列结构，以免影响教师审核。</p>
               <p>· 第二课堂活动（学术报告、培训等）填在「四、职业技能」大类，每 16 学时或 1 周记 1 学分。</p>
+              <p>· 表头的姓名、学号、专业班级、认定成绩等级为必填，漏填将无法上传。认定成绩等级请对照合计总学分自行填写：≥7 分为优秀，6 分为良好，5 分为中等，4 分为及格，不足 4 分为不及格。</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
