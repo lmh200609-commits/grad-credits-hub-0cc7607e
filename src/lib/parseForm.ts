@@ -142,7 +142,27 @@ export async function parseApplicationForm(file: File | ArrayBuffer): Promise<Pa
   if (items.length === 0) {
     return { ok: false, error: "未解析到任何有效条目，请确认已在模板中填写「认定成果名称」等内容（示例行不计入）" };
   }
-  return { ok: true, items, studentName, studentNo, totalCredit };
+
+  // 标准申请表（含「认定成绩等级」表头）：姓名/学号/专业班级/认定成绩等级为必填，漏填拦截
+  const headerText = grid.slice(0, 4).flat().join("|");
+  if (headerText.includes("认定成绩等级")) {
+    const missing: string[] = [];
+    if (!studentName) missing.push("姓名");
+    if (!studentNo) missing.push("学号");
+    if (!majorClass) missing.push("专业班级");
+    if (!gradeLevel) missing.push("认定成绩等级");
+    if (missing.length > 0) {
+      const gradeTip = missing.includes("认定成绩等级")
+        ? "。认定成绩等级请对照合计总学分自行填写：≥7分为优秀，6分为良好，5分为中等，4分为及格，不足4分为不及格"
+        : "";
+      return { ok: false, error: `申请表中的【${missing.join("、")}】未填写，无法保存！请在表格表头补齐后重新上传${gradeTip}` };
+    }
+    if (gradeLevel && !GRADE_LEVELS.includes(gradeLevel)) {
+      return { ok: false, error: `申请表中的【认定成绩等级】填写有误（当前为「${gradeLevel}」），只能填写：优秀、良好、中等、及格、不及格` };
+    }
+  }
+
+  return { ok: true, items, studentName, studentNo, totalCredit, majorClass, gradeLevel };
 }
 
 export function serializeItems(items: FormItem[]): string {
