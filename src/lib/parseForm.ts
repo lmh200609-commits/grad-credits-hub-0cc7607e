@@ -13,8 +13,10 @@ export type FormItem = {
 };
 
 export type ParseResult =
-  | { ok: true; error?: null; items: FormItem[]; studentName: string | null; studentNo: string | null; totalCredit: number | null }
+  | { ok: true; error?: null; items: FormItem[]; studentName: string | null; studentNo: string | null; totalCredit: number | null; majorClass: string | null; gradeLevel: string | null }
   | { ok: false; error: string };
+
+const GRADE_LEVELS = ["优秀", "良好", "中等", "及格", "不及格"];
 
 const SECTION_RE = /^[一二三四五六七八九十]+[、.．]\s*(.+)$/;
 const HEADER_MARKS = ["认定项目", "认定成果名称", "认定级别", "本人排名", "认定学分"];
@@ -45,15 +47,25 @@ export async function parseApplicationForm(file: File | ArrayBuffer): Promise<Pa
     return { ok: false, error: "表格结构不符（缺少「认定项目/成果名称/级别/排名/学分」列），请使用系统模板重新填写" };
   }
 
-  // 从表头区提取姓名/学号（如已填写）
-  let studentName: string | null = null;
-  let studentNo: string | null = null;
-  for (const row of grid.slice(0, 4)) {
-    for (const cell of row) {
-      const m1 = cell.match(/姓名[:：]\s*(\S+)/); if (m1) studentName = m1[1];
-      const m2 = cell.match(/学号[:：]\s*(\S+)/); if (m2) studentNo = m2[1];
+  // 从表头区提取姓名/学号/专业班级/认定成绩等级（值可写在冒号后，也可写在右侧相邻单元格）
+  const extractField = (label: string): string | null => {
+    for (const row of grid.slice(0, 4)) {
+      for (let i = 0; i < row.length; i++) {
+        const cell = row[i];
+        const m = cell.match(new RegExp(`${label}[:：]\\s*(\\S[\\s\\S]*)$`));
+        if (m) return m[1].trim();
+        if (cell.replace(/\s+/g, "") === `${label}：` || cell.replace(/\s+/g, "") === `${label}:`) {
+          const next = row.slice(i + 1).find((c) => c !== "" && !c.includes("：") && !c.includes(":"));
+          if (next) return next;
+        }
+      }
     }
-  }
+    return null;
+  };
+  const studentName = extractField("姓名");
+  const studentNo = extractField("学号");
+  const majorClass = extractField("专业班级");
+  const gradeLevel = extractField("认定成绩等级");
 
   const items: FormItem[] = [];
   let category = "";
@@ -130,7 +142,27 @@ export async function parseApplicationForm(file: File | ArrayBuffer): Promise<Pa
   if (items.length === 0) {
     return { ok: false, error: "未解析到任何有效条目，请确认已在模板中填写「认定成果名称」等内容（示例行不计入）" };
   }
-  return { ok: true, items, studentName, studentNo, totalCredit };
+
+  // 标准申请表（含「认定成绩等级」表头）：姓名/学号/专业班级/认定成绩等级为必填，漏填拦截
+  const headerText = grid.slice(0, 4).flat().join("|");
+  if (headerText.includes("认定成绩等级")) {
+    const missing: string[] = [];
+    if (!studentName) missing.push("姓名");
+    if (!studentNo) missing.push("学号");
+    if (!majorClass) missing.push("专业班级");
+    if (!gradeLevel) missing.push("认定成绩等级");
+    if (missing.length > 0) {
+      const gradeTip = missing.includes("认定成绩等级")
+        ? "。认定成绩等级请对照合计总学分自行填写：≥7分为优秀，6分为良好，5分为中等，4分为及格，不足4分为不及格"
+        : "";
+      return { ok: false, error: `申请表中的【${missing.join("、")}】未填写，无法保存！请在表格表头补齐后重新上传${gradeTip}` };
+    }
+    if (gradeLevel && !GRADE_LEVELS.includes(gradeLevel)) {
+      return { ok: false, error: `申请表中的【认定成绩等级】填写有误（当前为「${gradeLevel}」），只能填写：优秀、良好、中等、及格、不及格` };
+    }
+  }
+
+  return { ok: true, items, studentName, studentNo, totalCredit, majorClass, gradeLevel };
 }
 
 export function serializeItems(items: FormItem[]): string {
