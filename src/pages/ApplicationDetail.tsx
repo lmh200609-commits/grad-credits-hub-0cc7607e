@@ -221,7 +221,7 @@ const ApplicationDetail = () => {
         return;
       }
     }
-    const action = hasRole("admin") ? "admin_review" : "teacher_review";
+    const action = (hasRole("admin") || hasRole("super_admin")) ? "admin_review" : "teacher_review";
     const wasRejectedByAi = app.status === "rejected_by_ai";
     const hasCustom = (app.custom_keywords?.length ?? 0) > 0;
 
@@ -481,7 +481,7 @@ const ApplicationDetail = () => {
 
   const isApproved = app.status === "approved" || app.status === "auto_approved";
   const canExportCert =
-    isApproved && (app.student_id === user?.id || hasRole("teacher") || hasRole("admin"));
+    isApproved && (app.student_id === user?.id || hasRole("teacher") || hasRole("admin") || hasRole("super_admin"));
 
   const openCertificatePreview = async () => {
     if (!app || !student) return;

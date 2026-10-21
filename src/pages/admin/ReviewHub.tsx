@@ -75,7 +75,7 @@ const PAGE_SIZE = 50;
 const ReviewHub = () => {
   const navigate = useNavigate();
   const { user, hasRole } = useAuth();
-  const isAdmin = hasRole("admin");
+  const isAdmin = hasRole("admin") || hasRole("super_admin");
   const [params, setParams] = useSearchParams();
 
   const initialTab = params.get("status") && FILTERS[params.get("status")!] ? params.get("status")! : "pending_review";
