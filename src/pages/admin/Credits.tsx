@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/table";
 import { Download, Trophy, Users, CheckCircle2, AlertTriangle, ChevronDown } from "lucide-react";
 import { fetchAll } from "@/lib/fetchAll";
+import { gradeOf } from "@/lib/creditStandard";
+import { exportStatsSheetXlsx, type StatsRow } from "@/lib/windowStats";
 import TablePagination from "@/components/TablePagination";
 import * as XLSX from "xlsx";
 
@@ -151,6 +153,23 @@ const Credits = () => {
     XLSX.writeFile(wb, `学分排名_${tag}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
+  // 《长春财经学院本科生创新实践学分认定统计表》：全体毕业生汇总，含五级制成绩等级与签字栏
+  const exportStats = () => {
+    const stats: StatsRow[] = [...rows]
+      .sort((a, b) => (a.student_no ?? "").localeCompare(b.student_no ?? ""))
+      .map((r, i) => ({
+        no: i + 1,
+        college: r.department ?? "",
+        major: r.major ?? "",
+        className: r.class_name ?? "",
+        name: r.full_name ?? "",
+        studentNo: r.student_no ?? "",
+        total: Math.round(r.total_credit * 100) / 100,
+        grade: gradeOf(r.total_credit).label,
+      }));
+    exportStatsSheetXlsx(stats, "创新实践学分认定汇总", `长春财经学院本科生创新实践学分认定统计表_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
   return (
     <AppLayout>
       <div className="space-y-4">
@@ -158,9 +177,14 @@ const Credits = () => {
           title="学生学分排名"
           description="基于已通过的申请累计计算"
           actions={
-            <Button onClick={exportXlsx} variant="outline" size="sm">
-              <Download className="mr-2 h-4 w-4" /> 导出 Excel
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={exportStats} size="sm" disabled={rows.length === 0}>
+                <Download className="mr-2 h-4 w-4" /> 导出《创新实践学分认定统计表》
+              </Button>
+              <Button onClick={exportXlsx} variant="outline" size="sm">
+                <Download className="mr-2 h-4 w-4" /> 导出 Excel
+              </Button>
+            </div>
           }
         />
 
