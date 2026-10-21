@@ -100,5 +100,9 @@ export function exportStatsSheetXlsx(rows: StatsRow[], subtitle: string, fileNam
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "统计表");
-  XLSX.writeFile(wb, `${collegeName}-${windowName}-学分认定统计表.xlsx`);
+  XLSX.writeFile(wb, fileName);
+}
+
+export function exportWindowStatsXlsx(rows: StatsRow[], windowName: string, collegeName: string) {
+  exportStatsSheetXlsx(rows, `${collegeName} · ${windowName}`, `${collegeName}-${windowName}-学分认定统计表.xlsx`);
 }
