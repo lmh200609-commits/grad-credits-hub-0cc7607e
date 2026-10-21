@@ -73,11 +73,11 @@ export async function buildWindowStats(params: {
     .map((r, i) => ({ ...r, no: i + 1 }));
 }
 
-export function exportWindowStatsXlsx(rows: StatsRow[], windowName: string, collegeName: string) {
+export function exportStatsSheetXlsx(rows: StatsRow[], subtitle: string, fileName: string) {
   const title = "长春财经学院本科生创新实践学分认定统计表";
   const aoa: (string | number)[][] = [
     [title],
-    [`${collegeName} · ${windowName}`],
+    [subtitle],
     ["序号", "学院", "专业", "班级", "姓名", "学号", "认定总学分", "认定成绩等级"],
     ...rows.map((r) => [r.no, r.college, r.major, r.className, r.name, r.studentNo, r.total, r.grade]),
     [],
