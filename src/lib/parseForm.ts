@@ -55,7 +55,7 @@ export async function parseApplicationForm(file: File | ArrayBuffer): Promise<Pa
         const m = cell.match(new RegExp(`${label}[:：]\\s*(\\S[\\s\\S]*)$`));
         if (m) return m[1].trim();
         if (cell.replace(/\s+/g, "") === `${label}：` || cell.replace(/\s+/g, "") === `${label}:`) {
-          const next = row.slice(i + 1).find((c) => c !== "");
+          const next = row.slice(i + 1).find((c) => c !== "" && !c.includes("：") && !c.includes(":"));
           if (next) return next;
         }
       }
