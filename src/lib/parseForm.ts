@@ -47,15 +47,25 @@ export async function parseApplicationForm(file: File | ArrayBuffer): Promise<Pa
     return { ok: false, error: "表格结构不符（缺少「认定项目/成果名称/级别/排名/学分」列），请使用系统模板重新填写" };
   }
 
-  // 从表头区提取姓名/学号（如已填写）
-  let studentName: string | null = null;
-  let studentNo: string | null = null;
-  for (const row of grid.slice(0, 4)) {
-    for (const cell of row) {
-      const m1 = cell.match(/姓名[:：]\s*(\S+)/); if (m1) studentName = m1[1];
-      const m2 = cell.match(/学号[:：]\s*(\S+)/); if (m2) studentNo = m2[1];
+  // 从表头区提取姓名/学号/专业班级/认定成绩等级（值可写在冒号后，也可写在右侧相邻单元格）
+  const extractField = (label: string): string | null => {
+    for (const row of grid.slice(0, 4)) {
+      for (let i = 0; i < row.length; i++) {
+        const cell = row[i];
+        const m = cell.match(new RegExp(`${label}[:：]\\s*(\\S[\\s\\S]*)$`));
+        if (m) return m[1].trim();
+        if (cell.replace(/\s+/g, "") === `${label}：` || cell.replace(/\s+/g, "") === `${label}:`) {
+          const next = row.slice(i + 1).find((c) => c !== "");
+          if (next) return next;
+        }
+      }
     }
-  }
+    return null;
+  };
+  const studentName = extractField("姓名");
+  const studentNo = extractField("学号");
+  const majorClass = extractField("专业班级");
+  const gradeLevel = extractField("认定成绩等级");
 
   const items: FormItem[] = [];
   let category = "";
