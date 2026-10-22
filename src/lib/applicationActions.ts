@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { explainError } from "@/lib/errors";
 
 export type Decision = "approved" | "rejected";
 export type DecideResult = { ok: number; fail: number; errors: string[] };
@@ -31,7 +32,7 @@ export async function decideOne(opts: {
     credit: decision === "approved" ? credit : null,
     note: note?.trim() || null,
   });
-  if (re) return { ok: false, error: re.message };
+  if (re) return { ok: false, error: (await explainError(re)).description };
 
   const { error: ue } = await supabase
     .from("applications")
@@ -43,7 +44,7 @@ export async function decideOne(opts: {
       reviewed_at: new Date().toISOString(),
     })
     .eq("id", appId);
-  if (ue) return { ok: false, error: ue.message };
+  if (ue) return { ok: false, error: (await explainError(ue)).description };
   return { ok: true };
 }
 
