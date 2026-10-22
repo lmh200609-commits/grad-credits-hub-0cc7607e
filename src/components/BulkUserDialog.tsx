@@ -125,7 +125,7 @@ export default function BulkUserDialog({ open, mode, role, onClose, onDone }: Pr
     setConfirmOpen(false);
     setConfirmText("");
     if (error || (data as { error?: string })?.error) {
-      toast.error((data as { error?: string })?.error ?? error?.message ?? "操作失败");
+      toast.error((/[\u4e00-\u9fa5]/.test(String((data as { error?: string })?.error ?? "")) ? (data as { error: string }).error : "操作失败，请稍后再试"));
       return;
     }
     const d = data as { results: Array<{ user_id: string; ok: boolean; label: string; password?: string; error?: string }>; success_count: number; failure_count: number };

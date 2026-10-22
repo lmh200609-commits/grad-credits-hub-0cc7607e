@@ -57,7 +57,7 @@ const AiAssistant = () => {
     } catch (e: any) {
       toast({
         title: "助手暂时不可用",
-        description: e?.message || "请稍后再试",
+        description: (/[\u4e00-\u9fa5]/.test(String(e?.message ?? "")) ? e.message : "请稍后再试"),
         variant: "destructive",
       });
       setMessages((prev) => [
