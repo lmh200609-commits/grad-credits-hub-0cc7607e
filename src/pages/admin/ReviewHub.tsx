@@ -215,15 +215,26 @@ const ReviewHub = () => {
     reload();
   };
 
-  const quickDecide = async (r: Row, decision: "approved" | "rejected") => {
+  const quickDecide = async (r: Row, decision: "approved" | "rejected", note: string | null = null) => {
     if (!user) return;
     const res = await decideBatch({
       rows: [{ id: r.id, status: r.status, ai_suggested_credit: r.ai_suggested_credit, final_credit: r.final_credit }],
-      decision, defaultCredit: 1, note: null, reviewerId: user.id, isAdmin,
+      decision, defaultCredit: 1, note, reviewerId: user.id, isAdmin,
     });
     if (res.ok) toast({ title: decision === "approved" ? "已通过" : "已驳回" });
-    else toast({ title: "操作失败", description: res.errors[0], variant: "destructive" });
+    else toast({ title: "操作失败", description: res.errors[0] ?? "请刷新页面后再试", variant: "destructive" });
     reload();
+  };
+
+  const [quickRejectRow, setQuickRejectRow] = useState<Row | null>(null);
+  const [quickNote, setQuickNote] = useState("");
+  const confirmQuickReject = async () => {
+    if (!quickRejectRow || !quickNote.trim()) return;
+    setRunning(true);
+    await quickDecide(quickRejectRow, "rejected", quickNote.trim());
+    setRunning(false);
+    setQuickRejectRow(null);
+    setQuickNote("");
   };
 
   return (
@@ -360,7 +371,7 @@ const ReviewHub = () => {
                                 <Button size="sm" variant="ghost" className="h-7 px-2 text-success" onClick={() => quickDecide(r, "approved")}>
                                   <Check className="h-4 w-4" />
                                 </Button>
-                                <Button size="sm" variant="ghost" className="h-7 px-2 text-danger" onClick={() => quickDecide(r, "rejected")}>
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-danger" title="驳回" onClick={() => { setQuickNote(""); setQuickRejectRow(r); }}>
                                   <X className="h-4 w-4" />
                                 </Button>
                               </>
@@ -411,6 +422,26 @@ const ReviewHub = () => {
             <AlertDialogCancel disabled={running}>取消</AlertDialogCancel>
             <AlertDialogAction disabled={running} onClick={(e) => { e.preventDefault(); void runBatch("approved"); }}>
               {running ? "处理中…" : "确认通过"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 单条驳回 */}
+      <AlertDialog open={!!quickRejectRow} onOpenChange={(o) => { if (!o) setQuickRejectRow(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>驳回这条申请？</AlertDialogTitle>
+            <AlertDialogDescription>驳回后学生会看到驳回原因，可重新提交。已通过的申请也可在此改判为驳回。</AlertDialogDescription>
+          </AlertDialogHeader>
+          <div>
+            <Label>驳回原因 *</Label>
+            <Textarea rows={3} value={quickNote} onChange={(e) => setQuickNote(e.target.value)} placeholder="如：材料不全 / 与申请说明不符" />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={running}>取消</AlertDialogCancel>
+            <AlertDialogAction disabled={running || !quickNote.trim()} onClick={(e) => { e.preventDefault(); void confirmQuickReject(); }}>
+              {running ? "处理中…" : "确认驳回"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

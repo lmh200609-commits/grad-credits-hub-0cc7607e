@@ -412,7 +412,7 @@ const ApplicationDetail = () => {
       if (error || (data as any)?.error) {
         toast({
           title: "重试失败",
-          description: (data as any)?.error || error?.message || "请稍后再试",
+          description: (/[\u4e00-\u9fa5]/.test(String((data as any)?.error ?? "")) ? (data as any).error : "请稍后再试"),
           variant: "destructive",
         });
       } else {

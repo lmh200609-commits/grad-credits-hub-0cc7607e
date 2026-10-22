@@ -143,7 +143,7 @@ const StaffAiAssistant = () => {
       const isTimeout = /超时|timeout/i.test(e?.message || "");
       toast({
         title: isTimeout ? "请求超时" : "助手暂时不可用",
-        description: e?.message || "请稍后再试",
+        description: (/[\u4e00-\u9fa5]/.test(String(e?.message ?? "")) ? e.message : "请稍后再试"),
         variant: "destructive",
       });
       setMessages((prev) => [
