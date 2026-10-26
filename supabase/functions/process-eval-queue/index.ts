@@ -5,8 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-const DEFAULT_BATCH = 3;
-const DEFAULT_CONCURRENCY = 3;
+const DEFAULT_BATCH = 2;
+const DEFAULT_CONCURRENCY = 1;
 const PER_JOB_TIMEOUT_MS = 140_000;
 
 type Job = { id: string; application_id: string; attempts: number };
