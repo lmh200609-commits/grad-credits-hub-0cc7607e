@@ -171,17 +171,15 @@ Deno.serve(async (req) => {
     // 下载附件图片（新版：application_attachments 多张，最多取 4 张；旧版回退单张 file_path）
     const imageDataUrls: string[] = [];
     let attachmentNote = "无附件";
+    // 用临时签名链接交给模型读取，避免在函数里把大图转成 base64（会耗尽计算资源导致核对失败）。
     const toDataUrl = async (path: string): Promise<string | null> => {
-      const { data: blob, error: dlErr } = await admin.storage
+      const { data, error: sErr } = await admin.storage
         .from("application-files")
-        .download(path);
-      if (dlErr || !blob) return null;
-      const buf = new Uint8Array(await blob.arrayBuffer());
-      let bin = "";
-      for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
-      const ext = path.split(".").pop()!.toLowerCase();
-      const mime = ext === "jpg" ? "jpeg" : ext;
-      return `data:image/${mime};base64,${btoa(bin)}`;
+        .createSignedUrl(path, 60 * 60);
+      if (sErr || !data?.signedUrl) return null;
+      const head = await fetch(data.signedUrl, { method: "HEAD" }).catch(() => null);
+      if (!head || !head.ok) return null;
+      return data.signedUrl;
     };
 
     let attachPaths: string[] = [];
