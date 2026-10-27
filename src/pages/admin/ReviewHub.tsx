@@ -451,7 +451,7 @@ const ReviewHub = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>彻底删除这条申请？</AlertDialogTitle>
             <AlertDialogDescription>
-              将永久删除{deleteRow?.profile?.full_name ? `「${deleteRow.profile.full_name}」的` : ""}这条申请及其申请表、佐证文件和审核记录，删除后不会再出现在任何列表和导出材料中，且无法恢复。适用于重复提交或错误信息。
+              将永久删除这条申请及其申请表、佐证文件和审核记录，删除后不会再出现在任何列表和导出材料中，且无法恢复。适用于重复提交或错误信息。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
