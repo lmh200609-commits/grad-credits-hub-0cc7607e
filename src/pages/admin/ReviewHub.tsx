@@ -26,8 +26,9 @@ import TableSkeleton from "@/components/TableSkeleton";
 import TablePagination from "@/components/TablePagination";
 import { toast } from "@/hooks/use-toast";
 import { decideBatch } from "@/lib/applicationActions";
+import { deleteApplication } from "@/lib/deleteApplication";
 import {
-  CheckCircle2, XCircle, Clock, ShieldCheck, ShieldX, Sparkles, ExternalLink, Check, X,
+  CheckCircle2, XCircle, Clock, ShieldCheck, ShieldX, Sparkles, ExternalLink, Check, X, Trash2,
 } from "lucide-react";
 
 type Counts = Record<string, number>;
@@ -237,6 +238,18 @@ const ReviewHub = () => {
     setQuickNote("");
   };
 
+  const [deleteRow, setDeleteRow] = useState<Row | null>(null);
+  const confirmDelete = async () => {
+    if (!deleteRow) return;
+    setRunning(true);
+    const res = await deleteApplication(deleteRow.id);
+    setRunning(false);
+    setDeleteRow(null);
+    if (res.ok) toast({ title: "已彻底删除" });
+    else toast({ title: "删除失败", description: "error" in res ? res.error : "请刷新页面后再试", variant: "destructive" });
+    reload();
+  };
+
   return (
     <AppLayout>
       <div className="space-y-4">
@@ -376,6 +389,11 @@ const ReviewHub = () => {
                                 </Button>
                               </>
                             )}
+                            {isAdmin && (
+                              <Button size="sm" variant="ghost" className="h-7 px-2 text-danger" title="彻底删除" onClick={() => setDeleteRow(r)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button size="sm" variant="outline" onClick={() => navigate(`/applications/${r.id}`)}>查看</Button>
                           </div>
                         </TableCell>
@@ -422,6 +440,24 @@ const ReviewHub = () => {
             <AlertDialogCancel disabled={running}>取消</AlertDialogCancel>
             <AlertDialogAction disabled={running} onClick={(e) => { e.preventDefault(); void runBatch("approved"); }}>
               {running ? "处理中…" : "确认通过"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 彻底删除 */}
+      <AlertDialog open={!!deleteRow} onOpenChange={(o) => { if (!o) setDeleteRow(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>彻底删除这条申请？</AlertDialogTitle>
+            <AlertDialogDescription>
+              将永久删除这条申请及其申请表、佐证文件和审核记录，删除后不会再出现在任何列表和导出材料中，且无法恢复。适用于重复提交或错误信息。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={running}>取消</AlertDialogCancel>
+            <AlertDialogAction disabled={running} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={(e) => { e.preventDefault(); void confirmDelete(); }}>
+              {running ? "删除中…" : "确认删除"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

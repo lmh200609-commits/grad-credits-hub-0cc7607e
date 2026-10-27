@@ -29,6 +29,8 @@ const STATUS_LABEL: Record<string, string> = {
   rejected: "已驳回",
 };
 
+const PASSED = new Set(["approved", "auto_approved"]);
+
 type Row = {
   id: string;
   status: string;
@@ -74,7 +76,7 @@ export default function WindowExport() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [classFilter, setClassFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("passed");
   const [search, setSearch] = useState("");
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState<ExportProgress>({ volume: 1, done: 0, total: 0, elapsedMs: 0, etaMs: null });
@@ -155,7 +157,7 @@ export default function WindowExport() {
         };
       });
       setRows(merged);
-      setSelected(new Set(merged.map((r) => r.id)));
+      setSelected(new Set(merged.filter((r) => PASSED.has(r.status)).map((r) => r.id)));
     } catch (e) {
       toastError(e, "加载失败");
     } finally {
@@ -174,7 +176,8 @@ export default function WindowExport() {
     const kw = search.trim().toLowerCase();
     return rows.filter((r) => {
       if (classFilter !== "all" && (r.class_name || "未分班") !== classFilter) return false;
-      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (statusFilter === "passed") { if (!PASSED.has(r.status)) return false; }
+      else if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (kw && !`${r.student_no} ${r.full_name} ${titleOf(r.description)}`.toLowerCase().includes(kw)) return false;
       return true;
     });
@@ -308,7 +311,7 @@ export default function WindowExport() {
   };
 
   const doExport = async () => {
-    const targets = rows.filter((r) => selected.has(r.id));
+    const targets = rows.filter((r) => selected.has(r.id) && (statusFilter !== "passed" || PASSED.has(r.status)));
     if (targets.length === 0) return toast.error("请先勾选要导出的学生");
     const { tasks, names } = buildTasks(targets);
     if (tasks.length > 400) toast.info("材料较多，导出会自动分卷，请保持页面打开");
@@ -394,6 +397,7 @@ export default function WindowExport() {
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[180px]"><SelectValue placeholder="全部状态" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="passed">仅审核合格（默认）</SelectItem>
                   <SelectItem value="all">全部状态</SelectItem>
                   {Object.entries(STATUS_LABEL).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
                 </SelectContent>
