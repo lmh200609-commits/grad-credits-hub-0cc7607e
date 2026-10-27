@@ -246,7 +246,7 @@ const ReviewHub = () => {
     setRunning(false);
     setDeleteRow(null);
     if (res.ok) toast({ title: "已彻底删除" });
-    else toast({ title: "删除失败", description: res.error, variant: "destructive" });
+    else toast({ title: "删除失败", description: "error" in res ? res.error : "请刷新页面后再试", variant: "destructive" });
     reload();
   };
 
