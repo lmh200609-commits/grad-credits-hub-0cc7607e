@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { AlertTriangle, Copy, Loader2 } from "lucide-react";
 import { copyText } from "@/lib/clipboard";
 import { toastError } from "@/lib/errors";
+import { displayError } from "@/lib/displayText";
 
 type Result = {
   success?: boolean;
@@ -49,8 +50,8 @@ export default function PurgeAndBootstrap() {
         const t = await ctx?.text?.();
         if (t) detail = JSON.parse(t).error ?? detail;
       } catch {}
-      setResult({ error: detail });
-      toast.error(`执行失败：${detail}`);
+      setResult({ error: displayError(detail) });
+      toast.error(displayError(detail));
       return;
     }
     setResult(data as Result);
@@ -97,7 +98,7 @@ export default function PurgeAndBootstrap() {
         {result?.error && (
           <Alert variant="destructive">
             <AlertTitle>失败</AlertTitle>
-            <AlertDescription>{result.error}</AlertDescription>
+            <AlertDescription>{displayError(result.error)}</AlertDescription>
           </Alert>
         )}
 

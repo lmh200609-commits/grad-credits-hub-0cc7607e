@@ -13,6 +13,7 @@ import EmptyState from "@/components/EmptyState";
 import TableSkeleton from "@/components/TableSkeleton";
 import { Clock, Lock } from "lucide-react";
 import { deserializeItems } from "@/lib/parseForm";
+import { applicationDescription } from "@/lib/applicationDisplay";
 
 type Row = {
   id: string;
@@ -91,7 +92,7 @@ const MyApplications = () => {
 
   const getItemsSummary = (r: Row) => {
     const items = deserializeItems(r.description);
-    if (items.length === 0) return r.description || "—";
+    if (items.length === 0) return applicationDescription(r.description);
     return items
       .map((it) => [it.achievement, it.level, it.credit != null ? `${it.credit} 学分` : null].filter(Boolean).join(" · "))
       .join("；");
@@ -104,7 +105,7 @@ const MyApplications = () => {
     if (c.length > 0) return c.slice(0, 2).join(" · ");
     const s = (r.selected_keywords ?? []).filter(Boolean);
     if (s.length > 0) return s.join(" · ");
-    return (r.description || "").slice(0, 20) || "—";
+    return applicationDescription(r.description, true).slice(0, 20);
   };
 
 

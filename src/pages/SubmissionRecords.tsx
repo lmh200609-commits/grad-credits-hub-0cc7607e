@@ -22,6 +22,7 @@ import {
 import { ExternalLink, ChevronUp, ChevronDown, FileDown, ImageIcon } from "lucide-react";
 import { toPlainText } from "@/lib/sanitizeMarkdown";
 import { applicationDescription } from "@/lib/applicationDisplay";
+import { displayReason } from "@/lib/displayText";
 
 type Row = {
   id: string;
@@ -280,7 +281,7 @@ const SubmissionRecords = () => {
           {current && (() => {
             const p = profiles.get(current.student_id);
             const allKw = [...(current.selected_keywords ?? []), ...(current.custom_keywords ?? [])].filter(Boolean);
-            const reasonText = toPlainText(current.ai_reasoning_short?.trim() || current.ai_reasoning || "");
+            const reasonText = displayReason(current.ai_reasoning_short?.trim() || current.ai_reasoning || "");
             const shortReason = reasonText.slice(0, 80) + (reasonText.length > 80 ? "…" : "");
             return (
               <>
@@ -365,7 +366,7 @@ const SubmissionRecords = () => {
                       <CardContent>
                         <div className="mb-1 text-xs font-medium text-muted-foreground">详细理由</div>
                         <p className="whitespace-pre-wrap rounded bg-muted/50 p-3 text-xs leading-relaxed">
-                          {current.ai_reasoning ? toPlainText(current.ai_reasoning) : "系统未给出详细理由。"}
+                          {current.ai_reasoning ? displayReason(current.ai_reasoning) : "系统未给出详细理由。"}
                         </p>
                       </CardContent>
                     </Card>
@@ -400,7 +401,7 @@ const SubmissionRecords = () => {
                             {r.credit != null && <span className="text-muted-foreground">学分 {r.credit}</span>}
                             <span className="ml-auto text-muted-foreground">{new Date(r.created_at).toLocaleString("zh-CN", { hour12: false })}</span>
                           </div>
-                          {r.note && <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{toPlainText(r.note)}</p>}
+                          {r.note && <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{displayReason(r.note)}</p>}
                         </div>
                       ))}
                     </CardContent>

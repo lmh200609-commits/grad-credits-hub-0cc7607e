@@ -1,4 +1,5 @@
 import { deserializeItems } from "@/lib/parseForm";
+import { applicationDescription } from "@/lib/applicationDisplay";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -387,7 +388,7 @@ export default function AigcStatsPanel() {
       new Date(r.submitted_at).toLocaleString("zh-CN", { hour12: false }),
       STATUS_LABELS[r.aigc_status],
       typeof r.aigc_score === "number" ? (r.aigc_score * 100).toFixed(1) : "",
-      (r.description ?? "").slice(0, 40).replace(/[\r\n]+/g, " "),
+      applicationDescription(r.description, true).slice(0, 40).replace(/[\r\n]+/g, " "),
       r.college_id ?? "",
     ]);
     const escape = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
@@ -709,7 +710,7 @@ export default function AigcStatsPanel() {
                           {STATUS_LABELS[r.aigc_status]}
                         </td>
                         <td style={td}>{typeof r.aigc_score === "number" ? `${(r.aigc_score * 100).toFixed(1)}%` : "—"}</td>
-                        <td style={{ ...td, textAlign: "left" }}>{(r.description ?? "").slice(0, 40)}</td>
+                        <td style={{ ...td, textAlign: "left" }}>{applicationDescription(r.description, true).slice(0, 40)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -874,7 +875,7 @@ export default function AigcStatsPanel() {
                                         {STATUS_LABELS[r.aigc_status]}
                                       </td>
                                       <td style={td}>{typeof r.aigc_score === "number" ? `${(r.aigc_score * 100).toFixed(1)}%` : "—"}</td>
-                                      <td style={{ ...td, textAlign: "left" }}>{(r.description ?? "").slice(0, 60)}</td>
+                                      <td style={{ ...td, textAlign: "left" }}>{applicationDescription(r.description, true).slice(0, 60)}</td>
                                       <td style={{ ...td, textAlign: "left", fontFamily: "monospace", fontSize: 10 }}>{r.id.slice(0, 8)}…</td>
                                     </tr>
                                   ))}
@@ -921,7 +922,7 @@ export default function AigcStatsPanel() {
                         <td style={{ ...td, fontWeight: 600 }}>{STATUS_LABELS[r.aigc_status]}</td>
                         <td style={td}>{typeof r.aigc_score === "number" ? `${(r.aigc_score * 100).toFixed(1)}%` : "—"}</td>
                         <td style={{ ...td, textAlign: "left", fontFamily: "monospace", fontSize: 10 }}>{r.student_id?.slice(0, 8) ?? "—"}…</td>
-                        <td style={{ ...td, textAlign: "left" }}>{(r.description ?? "").slice(0, 60)}</td>
+                        <td style={{ ...td, textAlign: "left" }}>{applicationDescription(r.description, true).slice(0, 60)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1033,7 +1034,7 @@ function RiskyTable({
                   <td className="px-2 py-2 whitespace-nowrap">
                     {p ? `${p.full_name ?? "—"}（${p.student_no ?? "—"}）` : "—"}
                   </td>
-                  <td className="px-2 py-2 max-w-[280px] truncate" title={r.description ?? ""}>
+                  <td className="px-2 py-2 max-w-[280px] truncate" title={applicationDescription(r.description, true)}>
                     {titleOfDesc(r.description)}
                   </td>
                   <td className="px-2 py-2 text-right">
@@ -1058,7 +1059,7 @@ function RiskyTable({
 function titleOfDesc(d: string | null) {
   const items = deserializeItems(d ?? "");
   const t = items.map((it) => it.achievement).filter(Boolean).slice(0, 2).join(" · ");
-  return t || (d ?? "").slice(0, 30);
+  return t || applicationDescription(d, true).slice(0, 30);
 }
 
 function EmptyChart() {

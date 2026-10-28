@@ -19,6 +19,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, Pencil, PlugZap, CheckCircle2, XCircle, Loader2, Cpu } from "lucide-react";
 import { toastErrorLegacy } from "@/lib/errors";
+import { displayError } from "@/lib/displayText";
 
 const VENDOR_PRESETS = [
   { vendor: "deepseek", label: "DeepSeek 深度求索", baseUrl: "https://api.deepseek.com/v1", sample: "deepseek-chat",
@@ -106,16 +107,16 @@ const AiModelsPage = () => {
     setPingState((s) => ({ ...s, [providerId]: "loading" }));
     try {
       const r = await callAdmin("test_provider", { provider_id: providerId, model });
-      setPingState((s) => ({ ...s, [providerId]: { ok: !!r.ok, latency: r.latency_ms, msg: r.ok ? `示例：${r.sample || "ok"}` : (r.error || `HTTP ${r.status}`) } }));
+      setPingState((s) => ({ ...s, [providerId]: { ok: !!r.ok, latency: r.latency_ms, msg: r.ok ? "连接成功" : displayError(String(r.error || `服务响应异常（状态码 ${r.status}）`)) } }));
     } catch (e) {
-      setPingState((s) => ({ ...s, [providerId]: { ok: false, latency: 0, msg: (e as Error).message } }));
+      setPingState((s) => ({ ...s, [providerId]: { ok: false, latency: 0, msg: displayError((e as Error).message) } }));
     }
   };
 
   const onDeleteProvider = async (id: string) => {
     const used = bindings.find((b) => b.provider_id === id);
     if (used) {
-      toast({ title: "无法删除", description: `该提供商正被功能 ${used.function_key} 使用，请先解绑。`, variant: "destructive" });
+      toast({ title: "无法删除", description: `该提供商正被「${FUNCTION_LABELS[used.function_key]?.label ?? "系统功能"}」使用，请先解绑。`, variant: "destructive" });
       return;
     }
     if (!confirm("确认删除此提供商？")) return;
@@ -190,7 +191,7 @@ const AiModelsPage = () => {
                             {ps && ps !== "loading" && (
                               <span className={`flex items-center gap-1 text-xs ${ps.ok ? "text-green-600" : "text-destructive"}`}>
                                 {ps.ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
-                                {ps.ok ? `${ps.latency}ms` : ps.msg.slice(0, 60)}
+                                {ps.ok ? `${ps.latency} 毫秒` : ps.msg.slice(0, 60)}
                               </span>
                             )}
                           </div>
@@ -287,7 +288,7 @@ const BindingRow = ({
   const [customDraft, setCustomDraft] = useState("");
   const [editingCustom, setEditingCustom] = useState(false);
 
-  const meta = FUNCTION_LABELS[binding.function_key] ?? { label: binding.function_key, desc: "" };
+  const meta = FUNCTION_LABELS[binding.function_key] ?? { label: "其他系统功能", desc: "" };
   const providerId = binding.provider_id ?? "__none__";
   const currentProvider = providers.find((p) => p.id === binding.provider_id);
   const isBound = !!binding.provider_id && !!binding.ai_providers;
@@ -454,9 +455,9 @@ const ProviderDialog = ({
       if (apiKey) payload.api_key = apiKey;
       else if (editing) payload.provider_id = editing.id;
       const r = await callAdmin("test_provider", payload);
-      setTestResult({ ok: !!r.ok, msg: r.ok ? `连接成功 · ${r.sample || "ok"}` : (r.error || `HTTP ${r.status}`), latency: r.latency_ms });
+      setTestResult({ ok: !!r.ok, msg: r.ok ? "连接成功" : displayError(String(r.error || `服务响应异常（状态码 ${r.status}）`)), latency: r.latency_ms });
     } catch (e) {
-      setTestResult({ ok: false, msg: (e as Error).message });
+      setTestResult({ ok: false, msg: displayError((e as Error).message) });
     } finally {
       setTesting(false);
     }
@@ -530,7 +531,7 @@ const ProviderDialog = ({
           {testResult && (
             <div className={`rounded-md p-2 text-xs ${testResult.ok ? "bg-green-50 text-green-700" : "bg-destructive/10 text-destructive"}`}>
               {testResult.ok ? <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" /> : <XCircle className="mr-1 inline h-3.5 w-3.5" />}
-              {testResult.msg}{testResult.latency ? ` · ${testResult.latency}ms` : ""}
+              {testResult.msg}{testResult.latency ? ` · ${testResult.latency} 毫秒` : ""}
             </div>
           )}
         </div>

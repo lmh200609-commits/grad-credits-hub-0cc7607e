@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Download, Loader2, RotateCcw, X } from "lucide-react";
 import { toastError } from "@/lib/errors";
 import { deserializeItems } from "@/lib/parseForm";
+import { applicationDescription } from "@/lib/applicationDisplay";
 import { runZipExport, checkStorageReachable, ExportAborted, type ExportTask, type ExportProgress } from "@/lib/zipExport";
 import * as XLSX from "xlsx";
 
@@ -52,7 +53,7 @@ const titleOf = (description: string) => {
   const items = deserializeItems(description);
   const t = items.map((it) => it.achievement).filter(Boolean).slice(0, 2).join(" · ");
   if (t) return t;
-  return description?.trim() ? description.trim().slice(0, 40) : "未命名申请";
+  return applicationDescription(description, true).slice(0, 40);
 };
 
 const extOf = (path: string) => {

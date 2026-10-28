@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useRealtimeTable } from "@/hooks/useRealtimeTable";
 import { RefreshCw, Trash2, Activity } from "lucide-react";
+import { displayError } from "@/lib/displayText";
 
 /**
  * Real-time consistency check.
@@ -127,7 +128,7 @@ const RealtimeDiagnostics = () => {
       detail = "该表未加入实时发布通道，仅依赖轮询";
     } else if (srv?.error) {
       status = "no-data";
-      detail = `查询失败：${srv.error}`;
+      detail = `查询失败：${displayError(srv.error)}`;
     } else if (maxChangedTs == null) {
       status = srv?.rowCount === 0 ? "ok" : "no-data";
       detail = srv?.rowCount === 0 ? "无可见行" : "尚未拉取服务端时间";
