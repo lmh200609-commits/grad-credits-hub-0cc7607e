@@ -18,7 +18,7 @@ type Props = {
   /** 是否对当前用户显示（一般仅教师/管理员）。 */
   visible: boolean;
   /** 调用人脸比对完成后刷新父组件 */
-  onRefreshed?: () => void;
+  onRefreshed?: () => void | Promise<void>;
 };
 
 const META: Record<
@@ -71,12 +71,15 @@ export default function FaceMatchAlert({
   const run = async () => {
     setRunning(true);
     try {
-      const { error } = await supabase.functions.invoke("face-compare", {
+      const { data, error } = await supabase.functions.invoke("face-compare", {
         body: { application_id: applicationId },
       });
+      await onRefreshed?.();
+      setExpanded(true);
       if (error) throw error;
-      toast({ title: "已重新比对", description: "结果已更新" });
-      onRefreshed?.();
+      if (data?.error || data?.status === "error") throw new Error(displayError(data?.note || data?.error || "人脸比对失败，请稍后重试。"));
+      if (!data?.status) throw new Error("检测服务未返回新结果，请重试。");
+      toast({ title: data.status === "skipped" ? "本次未进行比对" : "重新比对完成", description: data.status === "skipped" ? displayReason(data.note) : `本次结果：${META[data.status as keyof typeof META]?.label ?? "请查看人脸核验结果"}` });
     } catch (e: any) {
       toastErrorLegacy(e, "比对失败");
     } finally {
