@@ -12,6 +12,8 @@ const LABELS: Record<string, string> = {
   request_id: "调用编号", provider: "服务提供方", service: "检测服务", region: "服务区域",
   role: "角色", roles: "角色", super_admin: "超级管理员", admin: "学院管理员",
   teacher: "教师", student: "学生", manual: "人工录入", ai: "系统生成", rule: "规则",
+  manual_import: "人工导入", excel_import: "表格导入", batch_import: "批量导入",
+  ai_import: "系统识别导入", system_import: "系统导入", seed: "初始数据",
   result: "结果", detected: "识别内容", override: "改判说明", matched_rule_id: "匹配规则编号",
 };
 

@@ -942,7 +942,7 @@ const ApplicationDetail = () => {
                     <StatusBadge status={r.decision as any} audience={isReviewer ? "staff" : "student"} />
                     {(r.credit != null || r.decision === "rejected" || r.decision === "rejected_by_ai") && (
                       <span className="text-muted-foreground">
-                        学分 {r.decision === "rejected" || r.decision === "rejected_by_ai" ? 0 : r.credit}
+                        当时审核学分：{r.decision === "rejected" || r.decision === "rejected_by_ai" ? 0 : r.credit} 分
                       </span>
                     )}
                     {isReviewer && r.confidence != null && (
