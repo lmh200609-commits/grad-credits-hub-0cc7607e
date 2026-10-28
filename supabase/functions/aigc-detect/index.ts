@@ -45,7 +45,7 @@ async function loadJwks(supaUrl: string): Promise<{ keys: JsonWebKey[] }> {
       console.warn("[aigc-detect] SUPABASE_JWKS is not valid JSON, fetching JWKS instead");
     }
   }
-  const resp = await fetch(`${supaUrl}/auth/v1/.well-known/jwks.json`);
+  const resp = await fetch(`${supaUrl}/auth/v1/.well-known/jwks.json`, { signal: AbortSignal.timeout(10000) });
   if (!resp.ok) throw new Error(`JWKS fetch failed: ${resp.status}`);
   return await resp.json();
 }
@@ -126,6 +126,7 @@ async function callAliyunImageModeration(opts: {
     method: "POST",
     headers: { ...headers, Authorization: authorization, "x-acs-action": action },
     body,
+    signal: AbortSignal.timeout(35000),
   });
   const txt = await resp.text();
   let raw: any = {};
@@ -203,7 +204,9 @@ Deno.serve(async (req) => {
     if (!parsedBody.success) return json({ error: "申请编号或重新鉴别参数无效" }, 400);
     const { application_id, force } = parsedBody.data;
 
-    const admin = createClient(supaUrl, serviceKey);
+    const admin = createClient(supaUrl, serviceKey, {
+      global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(12000) }) },
+    });
 
     const { data: app, error: appErr } = await admin
       .from("applications")
@@ -291,7 +294,19 @@ Deno.serve(async (req) => {
       return json({ status: "error", note: "无法生成图片访问链接" });
     }
 
-    const aly = await callAliyunImageModeration({ ak, sk, region, service, imageUrl });
+    console.log("[aigc-detect] requesting provider", { application_id, force });
+    let aly: Awaited<ReturnType<typeof callAliyunImageModeration>>;
+    try {
+      aly = await callAliyunImageModeration({ ak, sk, region, service, imageUrl });
+    } catch (e) {
+      const msg = e instanceof Error && /timeout|abort/i.test(`${e.name} ${e.message}`)
+        ? "阿里云鉴别服务响应超时，本次未获得鉴别结果，请稍后重试。"
+        : "连接阿里云鉴别服务失败，本次未获得鉴别结果，请稍后重试。";
+      await writeResult({ aigc_status: "error", aigc_score: null, aigc_detail: { error: msg } });
+      console.warn("[aigc-detect] provider unavailable", { application_id });
+      return json({ status: "error", note: msg }, 504);
+    }
+    console.log("[aigc-detect] provider returned", { application_id, http_status: aly.status, code: aly.raw?.Code });
     if (!aly.ok || (aly.raw?.Code && aly.raw.Code !== 200)) {
       const msg = `阿里云 [${aly.status}] ${JSON.stringify(aly.raw).slice(0, 300)}`;
       await writeResult({ aigc_status: "error", aigc_score: null, aigc_detail: { error: msg, request_id: aly.requestId } });

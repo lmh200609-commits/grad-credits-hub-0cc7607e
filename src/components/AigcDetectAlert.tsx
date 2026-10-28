@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, ShieldCheck, ShieldQuestion, RefreshCw, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { toastErrorLegacy } from "@/lib/errors";
 import { displayError, displayLabel } from "@/lib/displayText";
+import { withRequestTimeout } from "@/lib/requestTimeout";
 
 type Status = "pending" | "real" | "suspect" | "fake" | "skipped" | "error" | null | undefined;
 
@@ -64,6 +65,14 @@ export default function AigcDetectAlert({
 }: Props) {
   const [running, setRunning] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [progress, setProgress] = useState("");
+  useEffect(() => {
+    if (!running) return;
+    const started = Date.now();
+    const timer = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000);
+    return () => clearInterval(timer);
+  }, [running]);
   const [latest, setLatest] = useState<{ status: Status; score: number | null; detail: any; checkedAt: string | null } | null>(null);
 
   if (!visible) return null;
@@ -77,25 +86,35 @@ export default function AigcDetectAlert({
   const suspected: { name: string; score: number }[] = Array.isArray(detail?.suspected_models) ? detail.suspected_models : [];
 
   const run = async () => {
+    if (running) return;
     setRunning(true);
+    setElapsed(0);
+    setExpanded(true);
+    setProgress("正在发送重新鉴别请求，等待检测服务返回结果。");
+    const controller = new AbortController();
     try {
-      const { data, error } = await supabase.functions.invoke("aigc-detect", {
+      const { data, error } = await withRequestTimeout(supabase.functions.invoke("aigc-detect", {
         body: { application_id: applicationId, force: true },
-      });
+        signal: controller.signal,
+      }), 55000, "本次等待已超时，尚未确认鉴别完成；下方仍是上次结果，请稍后刷新查看。", () => controller.abort());
+      setProgress("正在读取本次鉴别结果。");
       // 无论调用成功还是失败，都读取实际保存的结果，避免继续显示旧时间。
-      const { data: saved, error: readError } = await supabase.from("applications")
-        .select("aigc_status, aigc_score, aigc_detail, aigc_checked_at").eq("id", applicationId).single();
+      const { data: saved, error: readError } = await withRequestTimeout(supabase.from("applications")
+        .select("aigc_status, aigc_score, aigc_detail, aigc_checked_at").eq("id", applicationId).single(), 10000, "读取结果超时，请刷新页面查看。");
       if (readError || !saved) throw new Error("无法读取最新鉴别结果，请刷新页面后查看。");
       setLatest({ status: saved.aigc_status as Status, score: saved.aigc_score, detail: saved.aigc_detail, checkedAt: saved.aigc_checked_at });
       setExpanded(true);
-      await onRefreshed?.();
+      // 结果已读回，不等待整页其他资料/文件加载，以免按钮继续转圈。
+      void Promise.resolve().then(() => onRefreshed?.()).catch(() => undefined);
       if (data?.reason === "already_processed") throw new Error("本次未重新鉴别，显示的仍是上次结果。");
       if (error || data?.error || saved.aigc_status === "error") {
         throw new Error(displayError(data?.note || data?.error || "调用阿里云鉴别服务失败，请查看下方失败原因。"));
       }
       if (!data?.status) throw new Error("检测服务未返回新结果，请重试。");
+      setProgress("本次鉴别已完成，最新结果如下。");
       toast({ title: "重新鉴别完成", description: `本次结果：${(META[saved.aigc_status as keyof typeof META] ?? META.pending).label}` });
     } catch (e: any) {
+      setProgress(e instanceof Error ? e.message : "本次鉴别未完成，请稍后刷新查看。");
       toastErrorLegacy(e, "鉴别失败");
     } finally {
       setRunning(false);
@@ -106,7 +125,7 @@ export default function AigcDetectAlert({
     <div className={`rounded-md border px-3 py-2 ${meta.tone}`}>
       <div className="flex items-center gap-2">
         <Icon className="h-4 w-4 shrink-0" />
-        <span className="text-sm font-medium">AI 生图鉴别：{meta.label}</span>
+        <span className="text-sm font-medium">AI 生图鉴别：{running ? "正在重新鉴别" : meta.label}</span>
         {pct && s !== "pending" && s !== "skipped" && s !== "error" && (
           <Badge variant="outline" className="bg-background/60">AI 生成概率 {pct}%</Badge>
         )}
@@ -121,6 +140,7 @@ export default function AigcDetectAlert({
           </Button>
         </div>
       </div>
+      {progress && <div role="status" aria-live="polite" className="mt-2 text-xs whitespace-pre-wrap break-words">{progress}{running ? ` 已等待 ${elapsed} 秒。下方显示上次结果。` : ""}</div>}
       {expanded && (
         <div className="mt-2 space-y-1 border-t border-current/20 pt-2 text-xs">
           <div>{meta.hint}</div>
