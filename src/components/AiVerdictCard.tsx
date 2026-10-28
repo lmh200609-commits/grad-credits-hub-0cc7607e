@@ -2,7 +2,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, MinusCircle, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toPlainText } from "@/lib/sanitizeMarkdown";
 import { displayReason } from "@/lib/displayText";
 
 export type AiVerdict = {

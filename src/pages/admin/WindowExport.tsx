@@ -254,7 +254,7 @@ export default function WindowExport() {
     const header = ["学号", "姓名", "班级", "材料类型", "证书名称", "认定学分", "审核结果", "对应文件"];
     const aoa: (string | number)[][] = [header];
     for (const r of targets) {
-      const info = [r.student_no || "无学号", r.full_name, r.class_name || "未分班", STATUS_LABEL[r.status] ?? r.status];
+      const info = [r.student_no || "无学号", r.full_name, r.class_name || "未分班", STATUS_LABEL[r.status] ?? "状态待确认"];
       if (r.form_file_path) {
         aoa.push([...info.slice(0, 3), "申请表", "创新实践学分认定申请表", r.final_credit ?? r.claimed_credit ?? "", info[3], names.get(`${r.id}|form`) ?? ""]);
       }
@@ -437,7 +437,7 @@ export default function WindowExport() {
                       <TableCell className="text-sm">{r.class_name || "未分班"}</TableCell>
                       <TableCell className="max-w-[260px] truncate text-sm">{titleOf(r.description)}</TableCell>
                       <TableCell className="text-sm">{r.final_credit ?? r.claimed_credit ?? "—"}</TableCell>
-                      <TableCell><Badge variant="outline">{STATUS_LABEL[r.status] ?? r.status}</Badge></TableCell>
+                      <TableCell><Badge variant="outline">{STATUS_LABEL[r.status] ?? "状态待确认"}</Badge></TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {(r.form_file_path ? 1 : 0) + r.attachments.length} 个
                       </TableCell>

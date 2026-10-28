@@ -17,6 +17,7 @@ import {
   type ParsedRow,
 } from "@/lib/parseRoster";
 import { toPlainText, translateFieldNames } from "@/lib/sanitizeMarkdown";
+import { displayLabel, displayError } from "@/lib/displayText";
 
 // 字段英文名 -> 中文显示名（用于预览表的错误悬浮提示）。
 const FIELD_LABEL: Record<string, string> = {
@@ -658,7 +659,7 @@ const MessageBubble = ({
                   const errs = rowErrors[i] ?? {};
                   const hasErr = Object.keys(errs).length > 0;
                   const errSummary = Object.entries(errs)
-                      .map(([k, v]) => `${FIELD_LABEL[k] ?? k}：${v}`)
+                      .map(([k, v]) => `${FIELD_LABEL[k] ?? displayLabel(k)}：${displayError(String(v))}`)
                     .join("\n");
                   return (
                     <TableRow

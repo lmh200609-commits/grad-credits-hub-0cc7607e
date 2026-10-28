@@ -136,6 +136,9 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">;
 
 function toast({ ...props }: Toast) {
+  if (props.variant === "destructive" && typeof props.title === "string") {
+    props.title = displayError(props.title);
+  }
   if (props.variant === "destructive" && typeof props.description === "string") {
     props.description = displayError(props.description);
   }

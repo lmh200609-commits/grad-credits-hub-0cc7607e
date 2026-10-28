@@ -18,7 +18,6 @@ import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Check, X, FileDown, ImageIcon, RefreshCw, Undo2, AlertTriangle, Award, ZoomIn } from "lucide-react";
 import ZoomableImage from "@/components/ZoomableImage";
 import { normalizeKeyword } from "@/lib/keywords";
-import { toPlainText } from "@/lib/sanitizeMarkdown";
 import { formatDepositDate, EMPTY_PLACEHOLDER } from "@/lib/utils";
 import CertificatePreview, { CertificateData } from "@/components/CertificatePreview";
 import { exportElementToPdf, makeQrDataUrl, urlToDataUrl } from "@/lib/certificate";
@@ -33,7 +32,7 @@ import FormFilePreview from "@/components/FormFilePreview";
 import { deserializeItems } from "@/lib/parseForm";
 import { COMPLIANCE_LABEL } from "@/lib/creditStandard";
 import { applicationDescription } from "@/lib/applicationDisplay";
-import { displayReason, displayError } from "@/lib/displayText";
+import { displayReason, displayError, displayValue } from "@/lib/displayText";
 
 // 把后端/Supabase 的英文错误信息翻译成简体中文，避免 RLS / JWT 等英文消息直接弹给用户
 function friendlyError(err: any): string {
@@ -770,7 +769,7 @@ const ApplicationDetail = () => {
                         <td className="py-2 pr-3">
                           {k.category ? <Badge variant="secondary">{k.category}</Badge> : <span className="text-muted-foreground">{EMPTY_PLACEHOLDER}</span>}
                         </td>
-                        <td className="py-2 pr-3 text-muted-foreground">{k.source ?? EMPTY_PLACEHOLDER}</td>
+                        <td className="py-2 pr-3 text-muted-foreground">{k.source ? displayValue(k.source) : EMPTY_PLACEHOLDER}</td>
                         <td className="py-2 pr-3 text-muted-foreground whitespace-nowrap">
                           {formatDepositDate(k.created_at)}
                         </td>

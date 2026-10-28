@@ -14,6 +14,6 @@ export function applicationDescription(description: string | null | undefined, c
     ].join("\n")).join("\n\n");
   }
   // Invalid structured data must not leak JSON into legacy description surfaces.
-  if (/^\s*[\[{]/.test(description)) return "申请条目信息暂时无法显示，请查看上传的申请表。";
+  if (/^\s*(?:\{|\[\s*(?:\{|\[|"|\d|\]))/.test(description)) return "申请条目信息暂时无法显示，请查看上传的申请表。";
   return toPlainText(description);
 }
