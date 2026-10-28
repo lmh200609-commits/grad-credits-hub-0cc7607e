@@ -1,6 +1,6 @@
 // AIGC 鉴别队列 worker。仿 process-eval-queue：service-role only，批量领任务并发执行。
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
-import { detectionFailed } from "../aigc-detect/networkRetry.ts";
+import { detectionFailed } from "../_shared/detectionNetworkRetry.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

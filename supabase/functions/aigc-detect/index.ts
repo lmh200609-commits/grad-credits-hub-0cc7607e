@@ -10,7 +10,7 @@ import { z } from "npm:zod@3";
 import { canReviewDetection, shouldSkipDetection } from "./retryPolicy.ts";
 import { providerErrorMessage } from "./providerError.ts";
 import { uploadTemporaryImage } from "./temporaryImage.ts";
-import { retryConnection } from "./networkRetry.ts";
+import { retryConnection } from "../_shared/detectionNetworkRetry.ts";
 
 const BodySchema = z.object({ application_id: z.string().uuid(), force: z.boolean().default(false) });
 const IMAGE_EXT = /\.(png|jpe?g|webp|gif|bmp)$/i;

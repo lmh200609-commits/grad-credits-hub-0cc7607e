@@ -4,7 +4,7 @@
 
 - Keep detection retry authorization and idempotency in the function-local retry policy; manual retries must bypass cached results only for authorized reviewers, while UI feedback reads persisted results with bounded waits and never blocks on full-page refresh.
 
-- Retry only transient detection connection failures within a fixed deadline; queue workers must inspect business error status even on HTTP 200 so failed detection is never marked complete.
+- Keep detection network retry and business-failure rules in the functions shared directory; retry transient failures within a fixed deadline and inspect HTTP 200 error status in workers so failed detection is never marked complete.
 
 - Keep application descriptions and verification text presentation in shared display helpers; every user-facing surface must decode structured data and localize internal labels without modifying stored evidence or credit decisions.
 

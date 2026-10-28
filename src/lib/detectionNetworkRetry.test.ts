@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { retryConnection, detectionFailed } from "../../supabase/functions/aigc-detect/networkRetry";
+import { retryConnection, detectionFailed } from "../../supabase/functions/_shared/detectionNetworkRetry";
 
 it("连接超时后重连一次可以成功", async () => {
   const request = vi.fn().mockRejectedValueOnce(new Error("Connection timed out")).mockResolvedValueOnce("result");
