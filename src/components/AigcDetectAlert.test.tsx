@@ -14,6 +14,14 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 const props = { applicationId: "14aa52be-0565-4b8b-9e65-cce909996171", status: "error" as const, score: null, detail: {}, checkedAt: "2026-10-26T12:53:14Z", visible: true };
 
 describe("重新鉴别", () => {
+  it("整页刷新未返回时仍结束本次鉴别等待", async () => {
+    mocks.invoke.mockResolvedValue({ data: { status: "real" }, error: null });
+    mocks.single.mockResolvedValue({ data: { aigc_status: "real", aigc_score: 0.12, aigc_detail: {}, aigc_checked_at: "2026-10-28T06:10:00Z" }, error: null });
+    render(<AigcDetectAlert {...props} onRefreshed={() => new Promise<void>(() => {})} />);
+    fireEvent.click(screen.getByRole("button", { name: "重新鉴别" }));
+    await waitFor(() => expect(mocks.toast).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("button", { name: "重新鉴别" })).not.toBeDisabled();
+  });
   it("发送强制重试并读取已保存的新结果", async () => {
     mocks.invoke.mockResolvedValue({ data: { status: "real" }, error: null });
     mocks.single.mockResolvedValue({ data: { aigc_status: "real", aigc_score: 0.12, aigc_detail: { request_id: "new-request" }, aigc_checked_at: "2026-10-28T06:10:00Z" }, error: null });
