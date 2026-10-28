@@ -398,7 +398,7 @@ const SubmissionRecords = () => {
                                 : r.action === "admin_review" ? "管理员复核" : toPlainText(r.action) === r.action ? "其他审核操作" : toPlainText(r.action)}
                             </Badge>
                             <StatusBadge status={r.decision as any} />
-                            {r.credit != null && <span className="text-muted-foreground">学分 {r.credit}</span>}
+                            {r.credit != null && <span className="text-muted-foreground">当时审核学分：{r.credit} 分</span>}
                             <span className="ml-auto text-muted-foreground">{new Date(r.created_at).toLocaleString("zh-CN", { hour12: false })}</span>
                           </div>
                           {r.note && <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{displayReason(r.note)}</p>}
