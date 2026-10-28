@@ -274,8 +274,8 @@ const ApplicationDetail = () => {
       );
 
       if (!ruleMatch && !caseMatch) {
-        const title = (app.custom_keywords?.[0] ?? allKw[0] ?? app.description).slice(0, 60);
-        const summary = `关键词：${allKw.join("、")}\n申请说明：${app.description.slice(0, 300)}`;
+        const title = (app.custom_keywords?.[0] ?? allKw[0] ?? applicationDescription(app.description, true)).slice(0, 60);
+        const summary = `关键词：${allKw.join("、")}\n申请说明：${applicationDescription(app.description).slice(0, 300)}`;
         const { error: ce } = await supabase.from("cases").insert({
           title,
           summary,
@@ -515,7 +515,7 @@ const ApplicationDetail = () => {
         (app.selected_keywords?.[0]) ||
         app.ai_detected_project ||
         app.ai_detected_achievement ||
-        (app.description || "").slice(0, 24) ||
+        applicationDescription(app.description, true).slice(0, 24) ||
         "—";
 
       setCertData({

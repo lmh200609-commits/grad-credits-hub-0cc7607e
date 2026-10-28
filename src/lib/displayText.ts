@@ -34,7 +34,7 @@ export function displayValue(value: unknown): string {
 export function displayReason(input: string | null | undefined): string {
   if (!input) return "";
   const text = input.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  if (/^[\[{]/.test(text)) {
+  if (/^(?:\{|\[\s*(?:\{|\[|"|\d|\]))/.test(text)) {
     try { return displayValue(JSON.parse(text)); }
     catch { return "核对说明暂时无法显示，请查看上方逐项核对结果。"; }
   }

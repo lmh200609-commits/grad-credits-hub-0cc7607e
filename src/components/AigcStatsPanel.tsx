@@ -1,5 +1,6 @@
 import { deserializeItems } from "@/lib/parseForm";
 import { applicationDescription } from "@/lib/applicationDisplay";
+import { displayError } from "@/lib/displayText";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -141,7 +142,7 @@ export default function AigcStatsPanel() {
         const m = new Map<string, string>();
         for (const it of (q ?? []) as { application_id: string; last_error: string | null; attempts: number }[]) {
           const raw = it.last_error ?? "";
-          const zh = /[\u4e00-\u9fa5]/.test(raw) ? raw : (raw ? "读取佐证材料图片时出错" : "未记录原因");
+          const zh = raw ? displayError(raw) : "未记录原因";
           m.set(it.application_id, `${zh}（已尝试 ${it.attempts} 次）`);
         }
         setErrReasons(m);

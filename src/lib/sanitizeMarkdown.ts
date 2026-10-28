@@ -14,6 +14,22 @@ const DECOR_EMOJI = /[⚠️📎👇✅❌🎉🤖💡⭐️✨📝📌🔔ℹ�
 // 数据库字段/表名 -> 中文显示名。用于把后端泄漏的英文标识翻译成自然中文。
 // 顺序很重要：长 key 必须排在短 key 之前，避免被部分匹配。
 const FIELD_LABELS: Array<[RegExp, string]> = [
+  [/\b(?:ai_)?identity_mismatch(?:_detail)?\b/g, "身份信息不符说明"],
+  [/\b(?:ai_)?logic_issue(?:_detail)?\b/g, "逻辑问题说明"],
+  [/\b(?:ai_)?blank_fields(?:_detail)?\b/g, "未填写字段"],
+  [/\b(?:ai_)?detected_project\b/g, "识别项目"],
+  [/\b(?:ai_)?detected_achievement\b/g, "识别成果"],
+  [/\b(?:ai_)?detected_level\b/g, "识别级别"],
+  [/\b(?:ai_)?detected_identity\b/g, "识别身份"],
+  [/\bdetected_student_no\b/g, "识别学号"],
+  [/\bdetected_school\b/g, "识别学校"],
+  [/\bcredit_compliance_note\b/g, "学分核对说明"],
+  [/\breasoning_short\b/g, "核对摘要"],
+  [/\breasoning\b/g, "核对理由"],
+  [/\brecommendation\b/g, "系统建议"],
+  [/\bapprove\b/g, "通过"],
+  [/\breject\b/g, "不通过"],
+  [/\breview\b/g, "待教师核对"],
   [/\b(?:ai_check_)?consistency(?:_ok)?\b/g, "材料一致性"],
   [/\b(?:ai_check_)?relevance(?:_ok)?\b/g, "材料相关性"],
   [/\b(?:ai_check_)?authenticity(?:_ok)?\b/g, "材料真实性"],

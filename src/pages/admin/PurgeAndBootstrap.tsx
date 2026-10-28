@@ -117,7 +117,7 @@ export default function PurgeAndBootstrap() {
                 <div>删除用户：{result.deleted_users}（孤儿档案 {result.deleted_orphan_profiles ?? 0}）</div>
                 <div>当前登录账号：{result.caller_preserved}（已保留）</div>
                 {!!result.delete_failures_sample?.length && (
-                  <div className="text-destructive">部分失败示例：{result.delete_failures_sample.join("; ")}</div>
+                  <div className="text-destructive">部分失败示例：{result.delete_failures_sample.map(displayError).join("；")}</div>
                 )}
               </CardContent>
             </Card>
