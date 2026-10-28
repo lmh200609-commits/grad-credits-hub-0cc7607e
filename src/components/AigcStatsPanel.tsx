@@ -1,3 +1,4 @@
+import { deserializeItems } from "@/lib/parseForm";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -92,6 +93,8 @@ export default function AigcStatsPanel() {
   const [rows, setRows] = useState<Row[]>([]);
   const [profiles, setProfiles] = useState<Map<string, ProfileLite>>(new Map());
   const [dayFocus, setDayFocus] = useState<string | null>(null);
+  const [pieFocus, setPieFocus] = useState<Row["aigc_status"] | null>(null);
+  const [errReasons, setErrReasons] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -131,6 +134,17 @@ export default function AigcStatsPanel() {
     } else {
       const list = (data ?? []) as Row[];
       setRows(list);
+      const errIds = list.filter((r) => r.aigc_status === "error").map((r) => r.id);
+      if (errIds.length) {
+        const { data: q } = await supabase.from("aigc_detect_queue").select("application_id, last_error, attempts").in("application_id", errIds);
+        const m = new Map<string, string>();
+        for (const it of (q ?? []) as { application_id: string; last_error: string | null; attempts: number }[]) {
+          const raw = it.last_error ?? "";
+          const zh = /[\u4e00-\u9fa5]/.test(raw) ? raw : (raw ? "读取佐证材料图片时出错" : "未记录原因");
+          m.set(it.application_id, `${zh}（已尝试 ${it.attempts} 次）`);
+        }
+        setErrReasons(m);
+      } else setErrReasons(new Map());
       const ids = Array.from(new Set(list.map((r) => r.student_id).filter(Boolean) as string[]));
       if (ids.length) {
         const { data: ps } = await supabase
@@ -215,14 +229,16 @@ export default function AigcStatsPanel() {
 
   // Top 20 高风险（可叠加按日聚焦过滤）
   const topRisky = useMemo(() => {
-    let list = filtered.filter((r) => r.aigc_status === "fake" || r.aigc_status === "suspect");
+    let list = pieFocus
+      ? filtered.filter((r) => r.aigc_status === pieFocus)
+      : filtered.filter((r) => r.aigc_status === "fake" || r.aigc_status === "suspect");
     if (dayFocus) {
       list = list.filter((r) => fmtDate(new Date(r.submitted_at)) === dayFocus);
     }
     return list
       .sort((a, b) => (b.aigc_score ?? 0) - (a.aigc_score ?? 0))
       .slice(0, 20);
-  }, [filtered, dayFocus]);
+  }, [filtered, dayFocus, pieFocus]);
 
   const scopeLabel = isSuperAdmin
     ? (collegeFilter === "all" ? "全校" : (colleges.find((c) => c.id === collegeFilter)?.name ?? "—"))
@@ -571,7 +587,7 @@ export default function AigcStatsPanel() {
                     label
                     onClick={(d: any) => {
                       const s = d?.payload?.status as Row["aigc_status"] | undefined;
-                      if (s) setStatuses([s]);
+                      if (s) { setPieFocus(s); setDayFocus(null); setTimeout(() => document.getElementById("aigc-detail-list")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); }
                     }}
                     style={{ cursor: "pointer" }}
                   >
@@ -592,7 +608,9 @@ export default function AigcStatsPanel() {
           rows={topRisky}
           profiles={profiles}
           dayFocus={dayFocus}
-          onClearFocus={() => setDayFocus(null)}
+          pieFocus={pieFocus ? STATUS_LABELS[pieFocus] : null}
+          errReasons={errReasons}
+          onClearFocus={() => { setDayFocus(null); setPieFocus(null); }}
           onRowClick={(id) => navigate(`/applications/${id}`)}
         />
 
@@ -953,9 +971,11 @@ function Kpi({ label, value, accent, onClick }: { label: string; value: string |
 }
 
 function RiskyTable({
-  rows, profiles, dayFocus, onClearFocus, onRowClick,
+  rows, profiles, dayFocus, pieFocus, errReasons, onClearFocus, onRowClick,
 }: {
   rows: Row[];
+  pieFocus: string | null;
+  errReasons: Map<string, string>;
   profiles: Map<string, ProfileLite>;
   dayFocus: string | null;
   onClearFocus: () => void;
@@ -964,20 +984,20 @@ function RiskyTable({
   if (rows.length === 0) {
     return (
       <div className="rounded-md border bg-card px-3 py-6 text-center text-sm text-muted-foreground">
-        当前范围内无高风险或嫌疑申请
-        {dayFocus && (
+        {pieFocus ? `当前范围内没有「${pieFocus}」的申请` : "当前范围内无高风险或嫌疑申请"}
+        {(dayFocus || pieFocus) && (
           <Button variant="link" size="sm" onClick={onClearFocus} className="ml-2">清除聚焦</Button>
         )}
       </div>
     );
   }
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" id="aigc-detail-list">
       <div className="flex items-center justify-between">
-        <div className="text-sm font-medium">高风险 / 嫌疑申请明细（点击行进入详情）</div>
-        {dayFocus && (
+        <div className="text-sm font-medium">{pieFocus ? `「${pieFocus}」申请明细` : "高风险 / 嫌疑申请明细"}（点击行进入详情）</div>
+        {(dayFocus || pieFocus) && (
           <div className="flex items-center gap-2 text-xs">
-            <Badge variant="secondary">已聚焦：{dayFocus}</Badge>
+            <Badge variant="secondary">已聚焦：{pieFocus ?? dayFocus}</Badge>
             <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={onClearFocus}>清除</Button>
           </div>
         )}
@@ -989,7 +1009,7 @@ function RiskyTable({
               <th className="px-2 py-2 text-left">#</th>
               <th className="px-2 py-2 text-left">提交时间</th>
               <th className="px-2 py-2 text-left">状态</th>
-              <th className="px-2 py-2 text-left">AI 概率</th>
+              <th className="px-2 py-2 text-left">{pieFocus === "失败" ? "失败原因" : "AI 生成概率"}</th>
               <th className="px-2 py-2 text-left">学生</th>
               <th className="px-2 py-2 text-left">申请描述</th>
               <th className="px-2 py-2 text-right">操作</th>
@@ -1006,15 +1026,15 @@ function RiskyTable({
                 >
                   <td className="px-2 py-2 text-muted-foreground">{i + 1}</td>
                   <td className="px-2 py-2 whitespace-nowrap">{new Date(r.submitted_at).toLocaleString("zh-CN", { hour12: false })}</td>
-                  <td className={`px-2 py-2 font-medium ${r.aigc_status === "fake" ? "text-destructive" : "text-warning"}`}>
-                    {r.aigc_status === "fake" ? "高风险" : "嫌疑"}
+                  <td className={`px-2 py-2 font-medium ${r.aigc_status === "fake" || r.aigc_status === "error" ? "text-destructive" : r.aigc_status === "real" ? "text-success" : "text-warning"}`}>
+                    {STATUS_LABELS[r.aigc_status]}
                   </td>
-                  <td className="px-2 py-2">{typeof r.aigc_score === "number" ? `${(r.aigc_score * 100).toFixed(1)}%` : "—"}</td>
+                  <td className="px-2 py-2">{r.aigc_status === "error" ? (errReasons.get(r.id) ?? "读取佐证材料图片时出错") : typeof r.aigc_score === "number" ? `${(r.aigc_score * 100).toFixed(1)}%` : "—"}</td>
                   <td className="px-2 py-2 whitespace-nowrap">
                     {p ? `${p.full_name ?? "—"}（${p.student_no ?? "—"}）` : "—"}
                   </td>
                   <td className="px-2 py-2 max-w-[280px] truncate" title={r.description ?? ""}>
-                    {(r.description ?? "").slice(0, 30)}
+                    {titleOfDesc(r.description)}
                   </td>
                   <td className="px-2 py-2 text-right">
                     <Button
@@ -1033,6 +1053,12 @@ function RiskyTable({
       </div>
     </div>
   );
+}
+
+function titleOfDesc(d: string | null) {
+  const items = deserializeItems(d ?? "");
+  const t = items.map((it) => it.achievement).filter(Boolean).slice(0, 2).join(" · ");
+  return t || (d ?? "").slice(0, 30);
 }
 
 function EmptyChart() {
