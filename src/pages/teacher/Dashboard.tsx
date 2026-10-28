@@ -190,7 +190,7 @@ const TeacherDashboard = () => {
                   <XAxis dataKey="date" className="text-xs" />
                   <YAxis allowDecimals={false} className="text-xs" />
                   <Tooltip />
-                  <Line type="monotone" dataKey="count" stroke="url(#lineGradT)" strokeWidth={3} dot={{ r: 3, fill: "#6366f1" }} activeDot={{ r: 5 }} />
+                  <Line type="monotone" dataKey="count" name="提交数" stroke="url(#lineGradT)" strokeWidth={3} dot={{ r: 3, fill: "#6366f1" }} activeDot={{ r: 5 }} />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>

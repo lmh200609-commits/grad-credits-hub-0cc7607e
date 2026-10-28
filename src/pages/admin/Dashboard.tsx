@@ -184,7 +184,7 @@ const AdminDashboard = () => {
                   <XAxis dataKey="date" className="text-xs" />
                   <YAxis allowDecimals={false} className="text-xs" />
                   <Tooltip />
-                  <Line type="monotone" dataKey="count" stroke="url(#lineGrad)" strokeWidth={3} dot={{ r: 3, fill: "#6366f1" }} activeDot={{ r: 5 }} />
+                  <Line type="monotone" dataKey="count" name="提交数" stroke="url(#lineGrad)" strokeWidth={3} dot={{ r: 3, fill: "#6366f1" }} activeDot={{ r: 5 }} />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -227,7 +227,7 @@ const AdminDashboard = () => {
                     <XAxis dataKey="name" className="text-xs" />
                     <YAxis allowDecimals={false} className="text-xs" />
                     <Tooltip />
-                    <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                    <Bar dataKey="value" name="学生人数" radius={[6, 6, 0, 0]}>
                       {deptStats.map((_, i) => <Cell key={i} fill={DEPT_COLORS[i % DEPT_COLORS.length]} />)}
                     </Bar>
                   </BarChart>
