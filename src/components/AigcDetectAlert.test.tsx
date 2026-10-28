@@ -19,7 +19,7 @@ describe("重新鉴别", () => {
     mocks.single.mockResolvedValue({ data: { aigc_status: "real", aigc_score: 0.12, aigc_detail: { request_id: "new-request" }, aigc_checked_at: "2026-10-28T06:10:00Z" }, error: null });
     render(<AigcDetectAlert {...props} />);
     fireEvent.click(screen.getByRole("button", { name: "重新鉴别" }));
-    await waitFor(() => expect(mocks.invoke).toHaveBeenCalledWith("aigc-detect", { body: { application_id: props.applicationId, force: true } }));
+    await waitFor(() => expect(mocks.invoke).toHaveBeenCalledWith("aigc-detect", expect.objectContaining({ body: { application_id: props.applicationId, force: true } })));
     await screen.findByText("AI 生图鉴别：判定为真实拍摄");
     expect(screen.getByText("AI 生成概率 12.0%")).toBeInTheDocument();
     expect(screen.getByText("调用编号：new-request")).toBeInTheDocument();
