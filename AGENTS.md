@@ -1,6 +1,6 @@
 # Project architecture
 
-- Transfer private evidence to Aliyun through DescribeUploadToken temporary OSS objects, never public buckets or browser credentials; delete temporary copies after moderation because remote signed-URL downloads can fail across regions.
+- Transfer private evidence to Aliyun through DescribeUploadToken temporary OSS objects, never public buckets or browser credentials; attempt cleanup after moderation and log denied cleanup without exposing credentials, because remote signed-URL downloads can fail across regions and managed upload tokens may deny deletion.
 
 - Keep detection retry authorization and idempotency in the function-local retry policy; manual retries must bypass cached results only for authorized reviewers, while UI feedback reads persisted results with bounded waits and never blocks on full-page refresh.
 
