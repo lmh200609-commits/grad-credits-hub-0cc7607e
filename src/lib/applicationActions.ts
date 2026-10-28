@@ -49,7 +49,7 @@ export async function decideOne(opts: {
 }
 
 export async function decideBatch(opts: {
-  rows: { id: string; status: string; ai_suggested_credit: number | null; final_credit: number | null }[];
+  rows: { id: string; status: string; ai_suggested_credit: number | null; final_credit: number | null; claimed_credit?: number | null }[];
   decision: Decision;
   defaultCredit: number;
   note: string | null;
@@ -63,7 +63,7 @@ export async function decideBatch(opts: {
   for (let i = 0; i < eligible.length; i++) {
     const r = eligible[i];
     const credit = decision === "approved"
-      ? (r.final_credit ?? r.ai_suggested_credit ?? defaultCredit)
+      ? (r.final_credit ?? r.claimed_credit ?? r.ai_suggested_credit ?? defaultCredit)
       : null;
     const res = await decideOne({ appId: r.id, decision, credit, note, reviewerId, isAdmin });
     if (res.ok) result.ok++;

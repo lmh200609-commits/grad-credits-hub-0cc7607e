@@ -222,7 +222,7 @@ const TeacherDashboard = () => {
           <CardHeader><CardTitle className="text-base">快捷入口</CardTitle></CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-3">
             <QuickLink to="/reviews" title="待审核" desc="处理待教师复核与已审申请" />
-            <QuickLink to="/teacher/credits" title="学分排名" desc="学生累计学分榜单与导出" />
+            <QuickLink to="/teacher/credits" title="学分统计" desc="按班级学号汇总学分与等级" />
             <QuickLink to="/teacher/students" title="学生管理" desc="查看学生档案与申请" />
           </CardContent>
         </Card>

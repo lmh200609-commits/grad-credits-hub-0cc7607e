@@ -206,8 +206,8 @@ export default function WindowExport() {
     const perStudentSeq = new Map<string, number>();
 
     for (const r of targets) {
-      const cls = safe(r.class_name || "未分班");
-      const person = safe(`${r.student_no || "无学号"}-${r.full_name}`);
+      const cls = safe(`${r.class_name || "未分班"}创新实践学分认定材料`);
+      const person = safe(`${r.student_no || "无学号"}${r.full_name}创新实践学分认定材料`);
       const folder = `${cls}/${person}`;
       const seq = (perStudentSeq.get(folder) ?? 0) + 1;
       perStudentSeq.set(folder, seq);

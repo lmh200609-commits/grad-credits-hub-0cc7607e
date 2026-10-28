@@ -66,8 +66,8 @@ const STATUS_LABELS: Record<string, string> = {
 const PATH_LABELS: Array<[RegExp, string]> = [
   [/^\/admin\/users\/students/, "打开学生管理"],
   [/^\/admin\/users\/teachers/, "打开教师管理"],
-  [/^\/admin\/credits/, "打开学分排名"],
-  [/^\/teacher\/credits/, "打开学分排名"],
+  [/^\/admin\/credits/, "打开学分统计"],
+  [/^\/teacher\/credits/, "打开学分统计"],
   [/^\/admin\/review/, "打开复核中心"],
   [/^\/reviews/, "打开审核列表"],
   [/^\/admin\/dashboard/, "打开数据看板"],
