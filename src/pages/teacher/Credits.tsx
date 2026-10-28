@@ -84,13 +84,8 @@ const Credits = () => {
         total_credit: Number(r.total_credit ?? 0),
         approved_count: Number(r.approved_count ?? 0),
         rank: 0,
-      })).sort((a: Row, b: Row) => b.total_credit - a.total_credit);
-      let rank = 0;
-      let prev = Number.POSITIVE_INFINITY;
-      const ranked: Row[] = sorted.map((r: Row) => {
-        if (r.total_credit < prev) { rank += 1; prev = r.total_credit; }
-        return { ...r, rank };
-      });
+      })).sort((a: Row, b: Row) => (a.class_name ?? "").localeCompare(b.class_name ?? "", "zh-CN") || (a.student_no ?? "").localeCompare(b.student_no ?? ""));
+      const ranked: Row[] = sorted.map((r: Row, i: number) => ({ ...r, rank: i + 1 }));
       setRows(ranked);
     })();
   }, []);
@@ -128,7 +123,7 @@ const Credits = () => {
   const maxCredit = useMemo(() => rows.reduce((m, r) => Math.max(m, r.total_credit), 0), [rows]);
 
   const exportXlsx = () => {
-    const header = ["排名", "姓名", "学号", "院系", "专业", "班级", "通过申请数", "累计学分", "成绩等级", "是否合格"];
+    const header = ["序号", "姓名", "学号", "院系", "专业", "班级", "通过申请数", "累计学分", "成绩等级", "是否合格"];
     const data = filtered.map((r) => [
       r.rank, r.full_name ?? "", r.student_no ?? "", r.department ?? "",
       r.major ?? "", r.class_name ?? "", r.approved_count, Number(r.total_credit.toFixed(1)),
@@ -138,17 +133,17 @@ const Credits = () => {
     const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
     ws["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "学分排名");
+    XLSX.utils.book_append_sheet(wb, ws, "学分统计");
     const tag = passFilter === "pass" ? "合格" : passFilter === "fail" ? "不合格" : "全部";
-    XLSX.writeFile(wb, `学分排名_${tag}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    XLSX.writeFile(wb, `学分统计_${tag}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   return (
     <AppLayout>
       <div className="space-y-4">
         <PageHeader
-          title="学生学分排名"
-          description="基于已通过的申请累计计算"
+          title="学分统计"
+          description="按班级、学号排列，累计学分取审核通过的申请合计学分"
           actions={
             <Button onClick={exportXlsx} variant="outline" size="sm">
               <Download className="mr-2 h-4 w-4" /> 导出 Excel
@@ -238,7 +233,7 @@ const Credits = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-16">排名</TableHead>
+                  <TableHead className="w-16">序号</TableHead>
                   <TableHead>姓名</TableHead>
                   <TableHead>学号</TableHead>
                   <TableHead>院系</TableHead>
@@ -258,7 +253,7 @@ const Credits = () => {
                   const passed = r.total_credit >= PASS_THRESHOLD;
                   return (
                   <TableRow key={r.user_id} className={!passed ? "bg-danger/5 hover:bg-danger/10" : "hover:bg-muted/40"}>
-                    <TableCell className="font-mono text-muted-foreground">#{r.rank}</TableCell>
+                    <TableCell className="font-mono text-muted-foreground">{r.rank}</TableCell>
                     <TableCell className="font-medium">{r.full_name ?? "—"}</TableCell>
                     <TableCell>{r.student_no ?? "—"}</TableCell>
                     <TableCell>{r.department ?? "—"}</TableCell>

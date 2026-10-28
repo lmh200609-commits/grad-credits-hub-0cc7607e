@@ -78,14 +78,14 @@ const Credits = () => {
       const [roles, profiles, apps] = await Promise.all([
         fetchAll<{ user_id: string }>(supabase.from("user_roles").select("user_id").eq("role", "student")),
         fetchAll<Omit<Row, "total_credit" | "approved_count">>(supabase.from("profiles").select("user_id, full_name, student_no, department, major, class_name")),
-        fetchAll<{ student_id: string; status: string; final_credit: number | null; ai_suggested_credit: number | null }>(
-          supabase.from("applications").select("student_id, status, final_credit, ai_suggested_credit")),
+        fetchAll<{ student_id: string; status: string; final_credit: number | null; claimed_credit: number | null; ai_suggested_credit: number | null }>(
+          supabase.from("applications").select("student_id, status, final_credit, claimed_credit, ai_suggested_credit")),
       ]);
       const ids = new Set(roles.map((r) => r.user_id));
       const credit = new Map<string, { total: number; count: number }>();
       apps.forEach((a) => {
         if (!APPROVED.includes(a.status)) return;
-        const c = Number(a.final_credit ?? a.ai_suggested_credit ?? 0);
+        const c = Number(a.final_credit ?? a.claimed_credit ?? a.ai_suggested_credit ?? 0);
         const cur = credit.get(a.student_id) ?? { total: 0, count: 0 };
         credit.set(a.student_id, { total: cur.total + c, count: cur.count + 1 });
       });
@@ -95,13 +95,8 @@ const Credits = () => {
           const c = credit.get(p.user_id) ?? { total: 0, count: 0 };
           return { ...p, total_credit: c.total, approved_count: c.count, rank: 0 };
         })
-        .sort((a, b) => b.total_credit - a.total_credit);
-      let rank = 0;
-      let prev = Number.POSITIVE_INFINITY;
-      const ranked: Row[] = sorted.map((r) => {
-        if (r.total_credit < prev) { rank += 1; prev = r.total_credit; }
-        return { ...r, rank };
-      });
+        .sort((a: Row, b: Row) => (a.class_name ?? "").localeCompare(b.class_name ?? "", "zh-CN") || (a.student_no ?? "").localeCompare(b.student_no ?? ""));
+      const ranked: Row[] = sorted.map((r: Row, i: number) => ({ ...r, rank: i + 1 }));
       setRows(ranked);
     })();
   }, []);
@@ -139,24 +134,24 @@ const Credits = () => {
   const maxCredit = useMemo(() => rows.reduce((m, r) => Math.max(m, r.total_credit), 0), [rows]);
 
   const exportXlsx = () => {
-    const header = ["排名", "姓名", "学号", "院系", "专业", "班级", "通过申请数", "累计学分", "是否合格"];
+    const header = ["序号", "姓名", "学号", "院系", "专业", "班级", "通过申请数", "累计学分", "认定成绩等级", "是否合格"];
     const data = filtered.map((r) => [
       r.rank, r.full_name ?? "", r.student_no ?? "", r.department ?? "",
-      r.major ?? "", r.class_name ?? "", r.approved_count, Number(r.total_credit.toFixed(1)),
+      r.major ?? "", r.class_name ?? "", r.approved_count, Number(r.total_credit.toFixed(1)), gradeOf(r.total_credit).label,
       r.total_credit >= PASS_THRESHOLD ? "合格" : "不合格",
     ]);
     const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
     ws["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "学分排名");
+    XLSX.utils.book_append_sheet(wb, ws, "学分统计");
     const tag = passFilter === "pass" ? "合格" : passFilter === "fail" ? "不合格" : "全部";
-    XLSX.writeFile(wb, `学分排名_${tag}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    XLSX.writeFile(wb, `学分统计_${tag}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   // 《长春财经学院本科生创新实践学分认定统计表》：全体毕业生汇总，含五级制成绩等级与签字栏
   const exportStats = () => {
     const stats: StatsRow[] = [...rows]
-      .sort((a, b) => (a.student_no ?? "").localeCompare(b.student_no ?? ""))
+      .sort((a, b) => (a.class_name ?? "").localeCompare(b.class_name ?? "", "zh-CN") || (a.student_no ?? "").localeCompare(b.student_no ?? ""))
       .map((r, i) => ({
         no: i + 1,
         college: r.department ?? "",
@@ -174,8 +169,8 @@ const Credits = () => {
     <AppLayout>
       <div className="space-y-4">
         <PageHeader
-          title="学生学分排名"
-          description="基于已通过的申请累计计算"
+          title="学分统计"
+          description="按班级、学号排列，累计学分取审核通过的申请合计学分"
           actions={
             <div className="flex gap-2">
               <Button onClick={exportStats} size="sm" disabled={rows.length === 0}>
@@ -273,7 +268,7 @@ const Credits = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-16">排名</TableHead>
+                  <TableHead className="w-16">序号</TableHead>
                   <TableHead>姓名</TableHead>
                   <TableHead>学号</TableHead>
                   <TableHead>院系</TableHead>
@@ -281,18 +276,19 @@ const Credits = () => {
                   <TableHead>班级</TableHead>
                   <TableHead className="text-right">通过申请</TableHead>
                   <TableHead className="text-right">累计学分</TableHead>
+                  <TableHead className="text-center">认定等级</TableHead>
                   <TableHead className="text-center">是否合格</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground">暂无数据</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground">暂无数据</TableCell></TableRow>
                 ) : paged.map((r) => {
                   const passed = r.total_credit >= PASS_THRESHOLD;
                   return (
                   <TableRow key={r.user_id} className={!passed ? "bg-danger/5 hover:bg-danger/10" : "hover:bg-muted/40"}>
-                    <TableCell className="font-mono text-muted-foreground">#{r.rank}</TableCell>
+                    <TableCell className="font-mono text-muted-foreground">{r.rank}</TableCell>
                     <TableCell className="font-medium">{r.full_name ?? "—"}</TableCell>
                     <TableCell>{r.student_no ?? "—"}</TableCell>
                     <TableCell>{r.department ?? "—"}</TableCell>
@@ -300,6 +296,7 @@ const Credits = () => {
                     <TableCell>{r.class_name ?? "—"}</TableCell>
                     <TableCell className="text-right">{r.approved_count}</TableCell>
                     <TableCell className={`text-right font-semibold ${passed ? "text-success" : "text-danger"}`}>{r.total_credit.toFixed(1)}</TableCell>
+                    <TableCell className="text-center">{gradeOf(r.total_credit).label}</TableCell>
                     <TableCell className="text-center">
                       <span className={`rounded px-2 py-0.5 text-xs font-medium ${passed ? "bg-success/15 text-success" : "bg-danger/15 text-danger"}`}>
                         {passed ? "合格" : "不合格"}

@@ -196,7 +196,7 @@ const ReviewHub = () => {
     const res = await decideBatch({
       rows: selectedRows.map((r) => ({
         id: r.id, status: r.status,
-        ai_suggested_credit: r.ai_suggested_credit, final_credit: r.final_credit,
+        ai_suggested_credit: r.ai_suggested_credit, final_credit: r.final_credit, claimed_credit: r.claimed_credit,
       })),
       decision,
       defaultCredit,
@@ -219,7 +219,7 @@ const ReviewHub = () => {
   const quickDecide = async (r: Row, decision: "approved" | "rejected", note: string | null = null) => {
     if (!user) return;
     const res = await decideBatch({
-      rows: [{ id: r.id, status: r.status, ai_suggested_credit: r.ai_suggested_credit, final_credit: r.final_credit }],
+      rows: [{ id: r.id, status: r.status, ai_suggested_credit: r.ai_suggested_credit, final_credit: r.final_credit, claimed_credit: r.claimed_credit }],
       decision, defaultCredit: 1, note, reviewerId: user.id, isAdmin,
     });
     if (res.ok) toast({ title: decision === "approved" ? "已通过" : "已驳回" });

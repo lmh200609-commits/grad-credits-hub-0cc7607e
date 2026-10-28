@@ -241,7 +241,7 @@ const AdminDashboard = () => {
           <CardHeader><CardTitle className="text-base">快捷入口</CardTitle></CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-3">
             <QuickLink to="/admin/review" title="复核中心" desc="按 AI 通过 / 拒绝 / 待复核 等分类查看" />
-            <QuickLink to="/admin/credits" title="学分排名" desc="学生累计学分榜单与导出" />
+            <QuickLink to="/admin/credits" title="学分统计" desc="按班级学号汇总学分与等级" />
             <QuickLink to="/admin/users/students" title="学生管理" desc="查看、停用、重置密码" />
           </CardContent>
         </Card>
