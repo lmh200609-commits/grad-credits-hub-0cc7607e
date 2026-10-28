@@ -66,7 +66,7 @@ export default function AigcDetectAlert({
 
   if (!visible) return null;
   const s: Exclude<Status, null | undefined> = (status as any) || "pending";
-  const meta = META[s];
+  const meta = META[s] ?? META.pending;
   const Icon = meta.icon;
   const pct = typeof score === "number" ? (score * 100).toFixed(1) : null;
   const suspected: { name: string; score: number }[] = Array.isArray(detail?.suspected_models) ? detail.suspected_models : [];
@@ -120,11 +120,11 @@ export default function AigcDetectAlert({
               ))}
             </div>
           )}
-          {detail?.request_id && <div className="opacity-70">RequestId: {String(detail.request_id)}</div>}
-          {detail?.provider && <div className="opacity-70">检测后端：{detail.provider}{detail.service ? ` / ${detail.service}` : ""}</div>}
+          {detail?.request_id && <div className="opacity-70 break-all">调用编号：{String(detail.request_id)}</div>}
+          {detail?.provider && <div className="opacity-70">检测服务：阿里云图片鉴别</div>}
           {detail?.region && (
             <div className="opacity-70">
-              区域：{String(detail.region)} · {" "}
+              区域：{detail.region === "cn-shanghai" ? "上海" : detail.region === "cn-beijing" ? "北京" : "其他服务区域"} · {" "}
               <a
                 href="https://yundun.console.aliyun.com/?p=cts#/imageaudit/dashboard?regionId=cn-shanghai"
                 target="_blank" rel="noreferrer"

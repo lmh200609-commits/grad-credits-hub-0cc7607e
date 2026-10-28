@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScanFace, AlertTriangle, CheckCircle2, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { toastErrorLegacy } from "@/lib/errors";
+import { displayError, displayReason } from "@/lib/displayText";
 
 type Status = "unknown" | "no_face" | "match" | "mismatch" | "error" | null | undefined;
 
@@ -64,7 +65,7 @@ export default function FaceMatchAlert({
 
   if (!visible) return null;
   const s: Exclude<Status, null | undefined> = (status as any) || "unknown";
-  const meta = META[s];
+  const meta = META[s] ?? META.unknown;
   const Icon = meta.icon;
 
   const run = async () => {
@@ -119,7 +120,7 @@ export default function FaceMatchAlert({
       {expanded && (
         <div className="mt-2 space-y-1 border-t border-current/20 pt-2 text-xs">
           <div>{meta.hint}</div>
-          {note && <div>AI 说明：{note}</div>}
+          {note && <div>核对说明：{s === "error" ? displayError(note) : displayReason(note)}</div>}
           {checkedAt && (
             <div className="opacity-70">检测时间：{new Date(checkedAt).toLocaleString("zh-CN", { hour12: false })}</div>
           )}

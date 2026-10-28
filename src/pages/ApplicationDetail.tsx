@@ -32,6 +32,8 @@ import AttachmentsGallery from "@/components/AttachmentsGallery";
 import FormFilePreview from "@/components/FormFilePreview";
 import { deserializeItems } from "@/lib/parseForm";
 import { COMPLIANCE_LABEL } from "@/lib/creditStandard";
+import { applicationDescription } from "@/lib/applicationDisplay";
+import { displayReason, displayError } from "@/lib/displayText";
 
 // 把后端/Supabase 的英文错误信息翻译成简体中文，避免 RLS / JWT 等英文消息直接弹给用户
 function friendlyError(err: any): string {
@@ -48,7 +50,7 @@ function friendlyError(err: any): string {
   if (msg.includes("network") || msg.includes("failed to fetch")) {
     return "网络异常，请稍后再试";
   }
-  return err?.message || "操作失败";
+  return displayError(err?.message || "操作失败");
 }
 
 type App = {
@@ -632,7 +634,7 @@ const ApplicationDetail = () => {
             {formItems.length === 0 && (
               <div>
                 <div className="mb-1 text-muted-foreground">申请说明</div>
-                <p className="whitespace-pre-wrap rounded bg-muted/50 p-3">{app.description}</p>
+                <p className="whitespace-pre-wrap break-words rounded bg-muted/50 p-3">{applicationDescription(app.description)}</p>
               </div>
             )}
 
@@ -805,7 +807,7 @@ const ApplicationDetail = () => {
                 <div className="rounded border border-destructive/40 bg-destructive/10 p-3 text-sm">
                   <div className="font-medium text-destructive">AI 审核未完成</div>
                   <div className="mt-1 whitespace-pre-wrap text-foreground">
-                    {toPlainText(String((app as any).ai_last_error ?? ""))}
+                    {displayError(String((app as any).ai_last_error ?? ""))}
                   </div>
                 </div>
               )}
@@ -835,7 +837,7 @@ const ApplicationDetail = () => {
                   上次结果备份于
                   {" "}
                   {new Date((app as any).ai_previous_snapshot.taken_at).toLocaleString("zh-CN", { hour12: false })}
-                  ，状态「{(app as any).ai_previous_snapshot.status ?? "—"}」
+                  ，状态：<StatusBadge status={(app as any).ai_previous_snapshot.status} />
                 </div>
               )}
             </CardContent>
@@ -950,7 +952,7 @@ const ApplicationDetail = () => {
                   </div>
                   <span className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString("zh-CN", { hour12: false })}</span>
                 </div>
-                {r.note && <p className="mt-2 whitespace-pre-wrap text-muted-foreground">{r.note}</p>}
+                {r.note && isReviewer && <p className="mt-2 whitespace-pre-wrap text-muted-foreground">{displayReason(r.note)}</p>}
               </div>
             ))}
             {(isReviewer ? reviews : reviews.filter((r) => r.action !== "ai_evaluation")).length === 0 && (

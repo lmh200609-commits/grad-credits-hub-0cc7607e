@@ -9,6 +9,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import type { Database } from "@/integrations/supabase/types";
+import { applicationDescription } from "@/lib/applicationDisplay";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 type Application = Database["public"]["Tables"]["applications"]["Row"];
@@ -97,7 +98,7 @@ const StudentDetail = () => {
                       <TableCell className="whitespace-nowrap text-muted-foreground">
                         {new Date(a.submitted_at).toLocaleString("zh-CN", { hour12: false })}
                       </TableCell>
-                      <TableCell className="max-w-md truncate">{a.description}</TableCell>
+                      <TableCell className="max-w-md truncate">{applicationDescription(a.description, true)}</TableCell>
                       <TableCell><StatusBadge status={a.status} /></TableCell>
                       <TableCell className="text-right">
                         {a.final_credit ?? a.ai_suggested_credit ?? "—"}

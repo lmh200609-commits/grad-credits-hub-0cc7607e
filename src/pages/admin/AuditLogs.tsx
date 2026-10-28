@@ -24,6 +24,7 @@ import TableSkeleton from "@/components/TableSkeleton";
 import TablePagination from "@/components/TablePagination";
 import { fetchAll } from "@/lib/fetchAll";
 import { resolveDisplayName } from "@/lib/displayName";
+import { displayValue } from "@/lib/displayText";
 
 const PAGE_SIZE = 30;
 
@@ -235,7 +236,7 @@ const AuditLogs = () => {
                 ) : filtered.length === 0 ? (
                   <TableRow><TableCell colSpan={7}><EmptyState title="暂无日志" description="完成一次批量操作后将在此处显示" /></TableCell></TableRow>
                 ) : paged.map((l) => {
-                  const meta = ACTION_LABEL[l.action] ?? { label: l.action, variant: "outline" as const };
+                  const meta = ACTION_LABEL[l.action] ?? { label: "其他操作", variant: "outline" as const };
                   return (
                     <TableRow key={l.id}>
                       <TableCell className="whitespace-nowrap text-sm text-muted-foreground">{fmtTime(l.created_at)}</TableCell>
@@ -251,7 +252,7 @@ const AuditLogs = () => {
                         <span className={l.failure_count > 0 ? "text-destructive" : "text-muted-foreground"}>{l.failure_count}</span>
                       </TableCell>
                       <TableCell className="text-right text-sm text-muted-foreground">
-                        {l.duration_ms != null ? `${(l.duration_ms / 1000).toFixed(2)}s` : "—"}
+                        {l.duration_ms != null ? `${(l.duration_ms / 1000).toFixed(2)} 秒` : "—"}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="outline" size="sm" onClick={() => setDetail(l)}>查看</Button>
@@ -272,7 +273,7 @@ const AuditLogs = () => {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {detail && (ACTION_LABEL[detail.action]?.label ?? detail.action)} · {detail && fmtTime(detail.created_at)}
+              {detail && (ACTION_LABEL[detail.action]?.label ?? "其他操作")} · {detail && fmtTime(detail.created_at)}
             </DialogTitle>
           </DialogHeader>
           {detail && (
@@ -285,7 +286,7 @@ const AuditLogs = () => {
                 <div>
                   <span className="text-muted-foreground">影响：</span>
                   共 {detail.affected_count} 条，成功 {detail.success_count}，失败 {detail.failure_count}
-                  {detail.duration_ms != null && `，耗时 ${(detail.duration_ms / 1000).toFixed(2)}s`}
+                  {detail.duration_ms != null && `，耗时 ${(detail.duration_ms / 1000).toFixed(2)} 秒`}
                 </div>
                 {detail.target_labels.length > 0 && (
                   <div>
@@ -298,10 +299,10 @@ const AuditLogs = () => {
                   </div>
                 )}
                 <div>
-                  <div className="mb-1 text-muted-foreground">元数据：</div>
-                  <pre className="overflow-auto rounded-md bg-muted/40 p-3 text-xs leading-relaxed">
-                    {JSON.stringify(detail.metadata, null, 2)}
-                  </pre>
+                  <div className="mb-1 text-muted-foreground">操作详情：</div>
+                  <div className="whitespace-pre-wrap break-words rounded-md bg-muted/40 p-3 text-xs leading-relaxed">
+                    {Object.keys(detail.metadata ?? {}).length ? displayValue(detail.metadata) : "无补充详情"}
+                  </div>
                 </div>
               </div>
             </ScrollArea>

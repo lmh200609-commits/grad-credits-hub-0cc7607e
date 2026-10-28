@@ -1,5 +1,6 @@
 import { toast as sonnerToast } from "sonner";
 import { toast as legacyToast } from "@/hooks/use-toast";
+import { displayError } from "@/lib/displayText";
 
 /**
  * 统一错误翻译 & 红色提示
@@ -101,7 +102,7 @@ export async function explainError(err: unknown, fallbackTitle = "操作失败")
   if (typeof err === "string") {
     const mapped = mapByPattern(err);
     if (mapped) return mapped;
-    return { title: fallbackTitle, description: looksLikeEnglish(err) ? "服务返回了未识别的错误，请稍后再试。" : err };
+    return { title: fallbackTitle, description: displayError(err) };
   }
 
   const anyErr = err as any;
@@ -114,7 +115,7 @@ export async function explainError(err: unknown, fallbackTitle = "操作失败")
       if (mapped) return mapped;
       // 业务端返回的中文 error 字段直接用
       if (!looksLikeEnglish(body)) {
-        return { title: fallbackTitle, description: body.length > 200 ? body.slice(0, 200) + "…" : body };
+        return { title: fallbackTitle, description: displayError(body) };
       }
     }
   }
@@ -134,7 +135,7 @@ export async function explainError(err: unknown, fallbackTitle = "操作失败")
   if (looksLikeEnglish(msg)) {
     return { title: fallbackTitle, description: "服务暂时不可用，请稍后再试。" };
   }
-  return { title: fallbackTitle, description: msg.length > 200 ? msg.slice(0, 200) + "…" : msg };
+  return { title: fallbackTitle, description: displayError(msg) };
 }
 
 /** 红色提示（基于 sonner）。 */
