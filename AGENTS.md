@@ -4,6 +4,8 @@
 
 - Keep detection retry authorization and idempotency in the function-local retry policy; manual retries must bypass cached results only for authorized reviewers, while UI feedback reads persisted results with bounded waits and never blocks on full-page refresh.
 
+- Keep detection network retry and business-failure rules in the functions shared directory; retry transient failures within a fixed deadline and inspect HTTP 200 error status in workers so failed detection is never marked complete.
+
 - Keep application descriptions and verification text presentation in shared display helpers; every user-facing surface must decode structured data and localize internal labels without modifying stored evidence or credit decisions.
 
 - Keep deterministic credit comparisons in `src/lib/creditStandard.ts`, with document-based numeric regression tests; teacher and student views share this lookup to prevent differing references.

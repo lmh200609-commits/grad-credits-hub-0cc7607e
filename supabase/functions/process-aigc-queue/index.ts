@@ -1,5 +1,6 @@
 // AIGC 鉴别队列 worker。仿 process-eval-queue：service-role only，批量领任务并发执行。
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { detectionFailed } from "../_shared/detectionNetworkRetry.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,7 +8,7 @@ const corsHeaders = {
 };
 const DEFAULT_BATCH = 5;
 const DEFAULT_CONCURRENCY = 3;
-const PER_JOB_TIMEOUT_MS = 30_000;
+const PER_JOB_TIMEOUT_MS = 65_000;
 
 type Job = { id: string; application_id: string; attempts: number };
 
@@ -23,7 +24,7 @@ async function runOne(admin: ReturnType<typeof createClient>, supaUrl: string, k
       method: "POST",
       signal: ctrl.signal,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}`, apikey: key },
-      body: JSON.stringify({ application_id: job.application_id }),
+      body: JSON.stringify({ application_id: job.application_id, force: job.attempts > 1 }),
     });
     clearTimeout(t);
     if (!resp.ok) {
@@ -31,7 +32,12 @@ async function runOne(admin: ReturnType<typeof createClient>, supaUrl: string, k
       await admin.rpc("mark_aigc_failed", { _id: job.id, _error: `HTTP ${resp.status}: ${txt}` });
       return { id: job.id, ok: false, error: txt };
     }
-    await resp.text();
+    const result = await resp.json();
+    if (detectionFailed(result)) {
+      const message = typeof result.note === "string" ? result.note : "图片鉴别未完成，请重试";
+      await admin.rpc("mark_aigc_failed", { _id: job.id, _error: message });
+      return { id: job.id, ok: false, error: message };
+    }
     await admin.rpc("mark_aigc_done", { _id: job.id });
     return { id: job.id, ok: true };
   } catch (e) {

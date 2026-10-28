@@ -10,6 +10,7 @@ import { z } from "npm:zod@3";
 import { canReviewDetection, shouldSkipDetection } from "./retryPolicy.ts";
 import { providerErrorMessage } from "./providerError.ts";
 import { uploadTemporaryImage } from "./temporaryImage.ts";
+import { retryConnection } from "../_shared/detectionNetworkRetry.ts";
 
 const BodySchema = z.object({ application_id: z.string().uuid(), force: z.boolean().default(false) });
 const IMAGE_EXT = /\.(png|jpe?g|webp|gif|bmp)$/i;
@@ -86,7 +87,7 @@ async function hmacSha256Hex(key: string | Uint8Array, msg: string): Promise<str
 }
 
 async function callAliyun(opts: {
-  ak: string; sk: string; region: string; action: string; parameters: Record<string, unknown>;
+  ak: string; sk: string; region: string; action: string; parameters: Record<string, unknown>; deadline: number;
 }): Promise<{ ok: boolean; status: number; raw: any; requestId?: string }> {
   const host = `green-cip.${opts.region}.aliyuncs.com`;
   const action = opts.action;
@@ -121,12 +122,13 @@ async function callAliyun(opts: {
   const authorization =
     `ACS3-HMAC-SHA256 Credential=${opts.ak},SignedHeaders=${signedHeaders},Signature=${signature}`;
 
-  const resp = await fetch(`https://${host}/`, {
+  const request = () => fetch(`https://${host}/`, {
     method: "POST",
     headers: { ...headers, Authorization: authorization, "x-acs-action": action },
     body,
-    signal: AbortSignal.timeout(35000),
+    signal: AbortSignal.timeout(Math.max(1, Math.min(12000, opts.deadline - Date.now()))),
   });
+  const resp = await retryConnection(request, () => opts.deadline - Date.now() > 3000);
   const txt = await resp.text();
   let raw: any = {};
   try { raw = JSON.parse(txt); } catch { raw = { raw_text: txt.slice(0, 500) }; }
@@ -286,27 +288,34 @@ Deno.serve(async (req) => {
     }
 
     console.log("[aigc-detect] requesting provider", { application_id, force });
+    const deadline = Date.now() + 42000;
+    let stage = "读取佐证图片";
+    const setStage = (next: string) => { stage = next; console.log("[aigc-detect] stage", { application_id, stage }); };
     let aly: Awaited<ReturnType<typeof callAliyun>>;
     let temporary: Awaited<ReturnType<typeof uploadTemporaryImage>> | undefined;
     try {
       // 私有材料由服务器读取并上传到阿里云官方临时空间，避免境内检测服务拉取海外签名链接失败。
       const { data: image, error: imageError } = await admin.storage.from("application-files").download(targetPath);
       if (imageError || !image || image.size === 0 || image.size > 10 * 1024 * 1024) throw new Error("无法读取佐证预览图片，请检查材料图片是否完整。");
-      const tokenResult = await callAliyun({ ak, sk, region, action: "DescribeUploadToken", parameters: {} });
+      setStage("获取阿里云上传许可");
+      const tokenResult = await callAliyun({ ak, sk, region, action: "DescribeUploadToken", parameters: {}, deadline });
       if (!tokenResult.ok || tokenResult.raw?.Code !== 200 || !tokenResult.raw?.Data?.SecurityToken) throw new Error("无法获取阿里云临时上传权限，请管理员检查图片检测权限。");
       const token = tokenResult.raw.Data;
+      setStage("上传检测图片");
       temporary = await uploadTemporaryImage(token, await image.arrayBuffer());
-      aly = await callAliyun({ ak, sk, region, action: "ImageModeration", parameters: {
+      setStage("等待阿里云鉴别结果");
+      aly = await callAliyun({ ak, sk, region, action: "ImageModeration", deadline, parameters: {
         Service: service,
         ServiceParameters: JSON.stringify({ ossBucketName: token.BucketName, ossObjectName: temporary.key, ossRegionId: region, dataId: crypto.randomUUID() }),
       } });
     } catch (e) {
       const msg = e instanceof Error && /timeout|abort/i.test(`${e.name} ${e.message}`)
-        ? "阿里云鉴别服务响应超时，本次未获得鉴别结果，请稍后重试。"
+        ? `${stage}超时，自动重连后仍未获得结果，请稍后重试。`
         : e instanceof Error && /^(无法|上传到|阿里云图片)/.test(e.message) ? e.message : "连接阿里云鉴别服务失败，本次未获得鉴别结果，请稍后重试。";
-      await writeResult({ aigc_status: "error", aigc_score: null, aigc_detail: { error: msg } });
-      console.warn("[aigc-detect] provider unavailable", { application_id });
-      return json({ status: "error", note: msg }, 504);
+      await writeResult({ aigc_status: "error", aigc_score: null, aigc_detail: { error: msg, stage } });
+      console.warn("[aigc-detect] provider unavailable", { application_id, stage });
+      // 可预期的检测失败作为业务结果返回，不让页面误报运行崩溃。
+      return json({ status: "error", note: msg });
     } finally {
       if (temporary) {
         const cleanup = temporary.remove().catch(() => console.warn("[aigc-detect] temporary image cleanup failed"));
