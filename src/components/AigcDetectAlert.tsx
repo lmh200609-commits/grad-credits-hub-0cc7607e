@@ -108,7 +108,7 @@ export default function AigcDetectAlert({
       void Promise.resolve().then(() => onRefreshed?.()).catch(() => undefined);
       if (data?.reason === "already_processed") throw new Error("本次未重新鉴别，显示的仍是上次结果。");
       if (error || data?.error || saved.aigc_status === "error") {
-        throw new Error(displayError(data?.note || data?.error || "调用阿里云鉴别服务失败，请查看下方失败原因。"));
+        throw new Error(displayError(data?.note || data?.error || (saved.aigc_detail as any)?.error || "调用阿里云鉴别服务失败，请查看下方失败原因。"));
       }
       if (!data?.status) throw new Error("检测服务未返回新结果，请重试。");
       setProgress("本次鉴别已完成，最新结果如下。");

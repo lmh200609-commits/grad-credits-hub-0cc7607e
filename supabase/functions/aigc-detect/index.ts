@@ -8,6 +8,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
 import { canReviewDetection, shouldSkipDetection } from "./retryPolicy.ts";
+import { providerErrorMessage } from "./providerError.ts";
+import { uploadTemporaryImage } from "./temporaryImage.ts";
 
 const BodySchema = z.object({ application_id: z.string().uuid(), force: z.boolean().default(false) });
 const IMAGE_EXT = /\.(png|jpe?g|webp|gif|bmp)$/i;
@@ -83,20 +85,17 @@ async function hmacSha256Hex(key: string | Uint8Array, msg: string): Promise<str
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function callAliyunImageModeration(opts: {
-  ak: string; sk: string; region: string; service: string; imageUrl: string;
+async function callAliyun(opts: {
+  ak: string; sk: string; region: string; action: string; parameters: Record<string, unknown>;
 }): Promise<{ ok: boolean; status: number; raw: any; requestId?: string }> {
   const host = `green-cip.${opts.region}.aliyuncs.com`;
-  const action = "ImageModeration";
+  const action = opts.action;
   const version = "2022-03-02";
   // 阿里云 ACS3-HMAC-SHA256 要求 ISO8601 扩展格式：2026-05-10T12:18:38Z（保留 - 和 :，去掉毫秒）
   const date = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
   const nonce = crypto.randomUUID().replace(/-/g, "");
 
-  const bodyObj = {
-    Service: opts.service,
-    ServiceParameters: JSON.stringify({ imageUrl: opts.imageUrl, dataId: nonce }),
-  };
+  const bodyObj = opts.parameters;
   const body = JSON.stringify(bodyObj);
   const bodyHash = await sha256Hex(body);
 
@@ -286,32 +285,40 @@ Deno.serve(async (req) => {
       return json({ status: "skipped", note: "非图片附件，无需 AIGC 检测" });
     }
 
-    const { data: signed } = await admin.storage.from("application-files").createSignedUrl(targetPath, 300);
-    const imageUrl = signed?.signedUrl;
-    if (!imageUrl) {
-      await writeResult({ aigc_status: "error", aigc_score: null, aigc_detail: { reason: "no signed url" } });
-      await promoteIfIntended();
-      return json({ status: "error", note: "无法生成图片访问链接" });
-    }
-
     console.log("[aigc-detect] requesting provider", { application_id, force });
-    let aly: Awaited<ReturnType<typeof callAliyunImageModeration>>;
+    let aly: Awaited<ReturnType<typeof callAliyun>>;
+    let temporary: Awaited<ReturnType<typeof uploadTemporaryImage>> | undefined;
     try {
-      aly = await callAliyunImageModeration({ ak, sk, region, service, imageUrl });
+      // 私有材料由服务器读取并上传到阿里云官方临时空间，避免境内检测服务拉取海外签名链接失败。
+      const { data: image, error: imageError } = await admin.storage.from("application-files").download(targetPath);
+      if (imageError || !image || image.size === 0 || image.size > 10 * 1024 * 1024) throw new Error("无法读取佐证预览图片，请检查材料图片是否完整。");
+      const tokenResult = await callAliyun({ ak, sk, region, action: "DescribeUploadToken", parameters: {} });
+      if (!tokenResult.ok || tokenResult.raw?.Code !== 200 || !tokenResult.raw?.Data?.SecurityToken) throw new Error("无法获取阿里云临时上传权限，请管理员检查图片检测权限。");
+      const token = tokenResult.raw.Data;
+      temporary = await uploadTemporaryImage(token, await image.arrayBuffer());
+      aly = await callAliyun({ ak, sk, region, action: "ImageModeration", parameters: {
+        Service: service,
+        ServiceParameters: JSON.stringify({ ossBucketName: token.BucketName, ossObjectName: temporary.key, ossRegionId: region, dataId: crypto.randomUUID() }),
+      } });
     } catch (e) {
       const msg = e instanceof Error && /timeout|abort/i.test(`${e.name} ${e.message}`)
         ? "阿里云鉴别服务响应超时，本次未获得鉴别结果，请稍后重试。"
-        : "连接阿里云鉴别服务失败，本次未获得鉴别结果，请稍后重试。";
+        : e instanceof Error && /^(无法|上传到|阿里云图片)/.test(e.message) ? e.message : "连接阿里云鉴别服务失败，本次未获得鉴别结果，请稍后重试。";
       await writeResult({ aigc_status: "error", aigc_score: null, aigc_detail: { error: msg } });
       console.warn("[aigc-detect] provider unavailable", { application_id });
       return json({ status: "error", note: msg }, 504);
+    } finally {
+      if (temporary) {
+        const cleanup = temporary.remove().catch(() => console.warn("[aigc-detect] temporary image cleanup failed"));
+        EdgeRuntime.waitUntil(cleanup);
+      }
     }
     console.log("[aigc-detect] provider returned", { application_id, http_status: aly.status, code: aly.raw?.Code });
     if (!aly.ok || (aly.raw?.Code && aly.raw.Code !== 200)) {
-      const msg = `阿里云 [${aly.status}] ${JSON.stringify(aly.raw).slice(0, 300)}`;
-      await writeResult({ aigc_status: "error", aigc_score: null, aigc_detail: { error: msg, request_id: aly.requestId } });
+      const msg = providerErrorMessage(aly.raw);
+      await writeResult({ aigc_status: "error", aigc_score: null, aigc_detail: { error: msg, request_id: aly.requestId, provider_code: aly.raw?.Code } });
       await promoteIfIntended();
-      return json({ status: "error", note: msg }, 500);
+      return json({ status: "error", note: msg });
     }
 
     const parsed = parseAliyunResult(aly.raw);
