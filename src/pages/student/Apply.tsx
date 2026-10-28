@@ -167,6 +167,9 @@ export default function Apply() {
   }, [items, catalogs]);
 
 
+  const [totalInput, setTotalInput] = useState("");
+  const totalNum = totalInput.trim() === "" ? null : Number(totalInput);
+  const totalValid = totalNum != null && Number.isFinite(totalNum) && totalNum >= 0;
   const claimedTotal = useMemo(
     () => (items ?? []).reduce((s, it) => s + (it.credit ?? 0), 0),
     [items],
@@ -201,6 +204,7 @@ export default function Apply() {
     }
     setFormFile(f);
     setItems(res.items);
+    setTotalInput(String(res.totalCredit ?? res.items.reduce((s, it) => s + (it.credit ?? 0), 0)));
     toast.success(`已解析出 ${res.items.length} 条认定条目`);
     if (res.gradeLevel) {
       const claimed = res.items.reduce((s, it) => s + (it.credit ?? 0), 0);
@@ -250,7 +254,7 @@ export default function Apply() {
 
   const canSubmit =
     !!user && windowOk === true && !!formFile && !!items && items.length > 0 &&
-    attachments.length > 0 && !submitting && !parsing;
+    attachments.length > 0 && totalValid && !submitting && !parsing;
 
   const submit = async () => {
     if (!user || !items || !formFile) return;
@@ -330,7 +334,7 @@ export default function Apply() {
             achievement_name: first.achievement,
             level_name: first.level,
             self_rank: first.rank,
-            claimed_credit: claimedTotal || null,
+            claimed_credit: totalValid ? totalNum : (claimedTotal || null),
             credit_standard: standardTotal,
             credit_compliance: complianceOverall,
             keywords_fingerprint: fps[0] || null,
@@ -500,6 +504,22 @@ export default function Apply() {
                       ))}
                     </TableBody>
                   </Table>
+                </div>
+                <div className="grid gap-3 rounded-md border p-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="total-credit">合计学分（必填）</Label>
+                    <Input id="total-credit" type="number" min={0} step="0.5" value={totalInput} onChange={(e) => setTotalInput(e.target.value)} placeholder="填写申请表中的合计总学分" />
+                    {totalValid && totalNum !== claimedTotal && (
+                      <p className="text-xs text-warning">与表内各条学分相加（{claimedTotal}）不一致，请核对</p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Label>认定成绩等级（系统自动）</Label>
+                    <div className="flex h-10 items-center rounded-md border bg-muted/40 px-3 text-sm font-medium">
+                      {totalValid ? gradeOf(totalNum!).label : "—"}
+                    </div>
+                    <p className="text-xs text-muted-foreground">4 分及格、5 分中等、6 分良好、7 分及以上优秀</p>
+                  </div>
                 </div>
                 {complianceOverall === "over" && (
                   <Alert>

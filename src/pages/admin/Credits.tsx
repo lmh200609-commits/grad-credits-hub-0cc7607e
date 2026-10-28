@@ -151,7 +151,7 @@ const Credits = () => {
   // 《长春财经学院本科生创新实践学分认定统计表》：全体毕业生汇总，含五级制成绩等级与签字栏
   const exportStats = () => {
     const stats: StatsRow[] = [...rows]
-      .sort((a, b) => (a.student_no ?? "").localeCompare(b.student_no ?? ""))
+      .sort((a, b) => (a.class_name ?? "").localeCompare(b.class_name ?? "", "zh-CN") || (a.student_no ?? "").localeCompare(b.student_no ?? ""))
       .map((r, i) => ({
         no: i + 1,
         college: r.department ?? "",
