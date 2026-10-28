@@ -31,7 +31,7 @@ export async function buildWindowStats(params: {
 }): Promise<StatsRow[]> {
   const { data: apps, error } = await supabase
     .from("applications")
-    .select("student_id, final_credit, status, submitted_at")
+    .select("student_id, final_credit, claimed_credit, status, submitted_at")
     .eq("college_id", params.collegeId)
     .in("status", ["approved", "auto_approved"])
     .gte("submitted_at", params.startsAt)
@@ -40,7 +40,7 @@ export async function buildWindowStats(params: {
 
   const totals = new Map<string, number>();
   for (const a of apps ?? []) {
-    const c = Number(a.final_credit ?? 0);
+    const c = Number(a.final_credit ?? (a as { claimed_credit?: number | null }).claimed_credit ?? 0);
     totals.set(a.student_id, (totals.get(a.student_id) ?? 0) + (Number.isFinite(c) ? c : 0));
   }
   const ids = [...totals.keys()];
@@ -69,7 +69,7 @@ export async function buildWindowStats(params: {
         grade: gradeOf(total).label,
       };
     })
-    .sort((a, b) => a.studentNo.localeCompare(b.studentNo))
+    .sort((a, b) => a.className.localeCompare(b.className, "zh-CN") || a.studentNo.localeCompare(b.studentNo))
     .map((r, i) => ({ ...r, no: i + 1 }));
 }
 
