@@ -1,5 +1,7 @@
 # Project architecture
 
+- Keep detection retry authorization and idempotency in the function-local retry policy; manual retries must bypass cached results only for authorized reviewers, while UI feedback reads persisted results.
+
 - Keep application descriptions and verification text presentation in shared display helpers; every user-facing surface must decode structured data and localize internal labels without modifying stored evidence or credit decisions.
 
 - Keep deterministic credit comparisons in `src/lib/creditStandard.ts`, with document-based numeric regression tests; teacher and student views share this lookup to prevent differing references.

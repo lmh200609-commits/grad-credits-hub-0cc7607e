@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, ShieldCheck, ShieldQuestion, RefreshCw, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { toastErrorLegacy } from "@/lib/errors";
+import { displayError, displayLabel } from "@/lib/displayText";
 
 type Status = "pending" | "real" | "suspect" | "fake" | "skipped" | "error" | null | undefined;
 
@@ -16,7 +17,7 @@ type Props = {
   checkedAt: string | null | undefined;
   /** 仅教师/管理员可见。 */
   visible: boolean;
-  onRefreshed?: () => void;
+  onRefreshed?: () => void | Promise<void>;
 };
 
 const META: Record<Exclude<Status, null | undefined>, { tone: string; label: string; icon: any; hint: string }> = {
@@ -63,23 +64,37 @@ export default function AigcDetectAlert({
 }: Props) {
   const [running, setRunning] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [latest, setLatest] = useState<{ status: Status; score: number | null; detail: any; checkedAt: string | null } | null>(null);
 
   if (!visible) return null;
-  const s: Exclude<Status, null | undefined> = (status as any) || "pending";
+  const s = latest?.status || status || "pending";
   const meta = META[s] ?? META.pending;
   const Icon = meta.icon;
+  score = latest ? latest.score : score;
+  detail = latest ? latest.detail : detail;
+  checkedAt = latest ? latest.checkedAt : checkedAt;
   const pct = typeof score === "number" ? (score * 100).toFixed(1) : null;
   const suspected: { name: string; score: number }[] = Array.isArray(detail?.suspected_models) ? detail.suspected_models : [];
 
   const run = async () => {
     setRunning(true);
     try {
-      const { error } = await supabase.functions.invoke("aigc-detect", {
-        body: { application_id: applicationId },
+      const { data, error } = await supabase.functions.invoke("aigc-detect", {
+        body: { application_id: applicationId, force: true },
       });
-      if (error) throw error;
-      toast({ title: "已重新鉴别", description: "结果已更新" });
-      onRefreshed?.();
+      // 无论调用成功还是失败，都读取实际保存的结果，避免继续显示旧时间。
+      const { data: saved, error: readError } = await supabase.from("applications")
+        .select("aigc_status, aigc_score, aigc_detail, aigc_checked_at").eq("id", applicationId).single();
+      if (readError || !saved) throw new Error("无法读取最新鉴别结果，请刷新页面后查看。");
+      setLatest({ status: saved.aigc_status as Status, score: saved.aigc_score, detail: saved.aigc_detail, checkedAt: saved.aigc_checked_at });
+      setExpanded(true);
+      await onRefreshed?.();
+      if (data?.reason === "already_processed") throw new Error("本次未重新鉴别，显示的仍是上次结果。");
+      if (error || data?.error || saved.aigc_status === "error") {
+        throw new Error(displayError(data?.note || data?.error || "调用阿里云鉴别服务失败，请查看下方失败原因。"));
+      }
+      if (!data?.status) throw new Error("检测服务未返回新结果，请重试。");
+      toast({ title: "重新鉴别完成", description: `本次结果：${(META[saved.aigc_status as keyof typeof META] ?? META.pending).label}` });
     } catch (e: any) {
       toastErrorLegacy(e, "鉴别失败");
     } finally {
@@ -92,7 +107,7 @@ export default function AigcDetectAlert({
       <div className="flex items-center gap-2">
         <Icon className="h-4 w-4 shrink-0" />
         <span className="text-sm font-medium">AI 生图鉴别：{meta.label}</span>
-        {pct && s !== "pending" && s !== "skipped" && (
+        {pct && s !== "pending" && s !== "skipped" && s !== "error" && (
           <Badge variant="outline" className="bg-background/60">AI 生成概率 {pct}%</Badge>
         )}
         <div className="ml-auto flex items-center gap-1">
@@ -109,13 +124,15 @@ export default function AigcDetectAlert({
       {expanded && (
         <div className="mt-2 space-y-1 border-t border-current/20 pt-2 text-xs">
           <div>{meta.hint}</div>
+          {s === "error" && <div>失败原因：{displayError(String(detail?.error || detail?.reason || "调用阿里云鉴别服务失败，请稍后重试。"))}</div>}
+          {s === "skipped" && <div>{detail?.reason === "disabled by college config" ? "本学院已关闭图片鉴别。" : "未找到可用于鉴别的材料图片。"}</div>}
           {suspected.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
               <Sparkles className="h-3 w-3" />
               <span>疑似来源：</span>
               {suspected.slice(0, 5).map((m, i) => (
                 <Badge key={i} variant="outline" className="bg-background/60">
-                  {m.name} {(m.score * 100).toFixed(0)}%
+                  {m.name === "risk_aigc" ? "疑似生成图片" : m.name === "risk_edit" ? "疑似修改图片" : m.name.includes("_") ? displayLabel(m.name) : m.name} {(m.score * 100).toFixed(0)}%
                 </Badge>
               ))}
             </div>

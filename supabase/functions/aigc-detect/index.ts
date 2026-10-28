@@ -5,11 +5,11 @@
 //   suspect → 保持 pending_ai，但 evaluate-application 看到后会强制降级 pending_review
 //   fake    → 直接 rejected_by_ai，跳过学分评估
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { z } from "npm:zod@3";
+import { canReviewDetection, shouldSkipDetection } from "./retryPolicy.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const BodySchema = z.object({ application_id: z.string().uuid(), force: z.boolean().default(false) });
 const IMAGE_EXT = /\.(png|jpe?g|webp|gif|bmp)$/i;
 const DEFAULT_SUSPECT = 0.40;
 const DEFAULT_FAKE = 0.80;
@@ -173,8 +173,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const supaUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supaUrl = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supaUrl || !serviceKey) return json({ error: "检测服务配置不完整" }, 500);
     const ak = Deno.env.get("ALIYUN_AK_ID");
     const sk = Deno.env.get("ALIYUN_AK_SECRET");
     const region = Deno.env.get("ALIYUN_GREEN_REGION") || "cn-shanghai";
@@ -182,7 +183,7 @@ Deno.serve(async (req) => {
     if (!ak || !sk) return json({ error: "ALIYUN_AK_ID / ALIYUN_AK_SECRET 未配置" }, 500);
 
     const auth = req.headers.get("Authorization") ?? "";
-    const isService = auth.includes(serviceKey);
+    const isService = auth === `Bearer ${serviceKey}`;
 
     let callerId: string | null = null;
     if (!isService) {
@@ -198,9 +199,9 @@ Deno.serve(async (req) => {
       callerId = claims.sub as string;
     }
 
-    const body = await req.json().catch(() => ({}));
-    const application_id = String(body?.application_id ?? "");
-    if (!application_id) return json({ error: "application_id required" }, 400);
+    const parsedBody = BodySchema.safeParse(await req.json().catch(() => null));
+    if (!parsedBody.success) return json({ error: "申请编号或重新鉴别参数无效" }, 400);
+    const { application_id, force } = parsedBody.data;
 
     const admin = createClient(supaUrl, serviceKey);
 
@@ -211,15 +212,16 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (appErr || !app) return json({ error: "application not found" }, 404);
 
-    // 幂等：若 AIGC 已经处理过（非 pending），直接返回，避免 inline 唤起与队列 worker 重复执行。
-    if (app.aigc_status && app.aigc_status !== "pending") {
-      return json({ skipped: true, reason: "already_processed", status: app.aigc_status });
+    // 手动重试仅限本学院审核人员；先验证权限，再返回任何历史结果。
+    if (!isService && (force || callerId !== app.student_id)) {
+      const { data: roles } = await admin.from("user_roles").select("role, college_id").eq("user_id", callerId);
+      const ok = canReviewDetection(roles ?? [], app.college_id);
+      if (!ok) return json({ error: "forbidden" }, 403);
     }
 
-    if (!isService && callerId !== app.student_id) {
-      const { data: roles } = await admin.from("user_roles").select("role").eq("user_id", callerId);
-      const ok = (roles ?? []).some((r: any) => r.role === "teacher" || r.role === "admin" || r.role === "super_admin");
-      if (!ok) return json({ error: "forbidden" }, 403);
+    // 自动唤起仍保持幂等，明确的手动重试才会重新调用鉴别服务。
+    if (shouldSkipDetection(app.aigc_status, force)) {
+      return json({ skipped: true, reason: "already_processed", status: app.aigc_status });
     }
 
     // 学院阈值
@@ -234,12 +236,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    const writeResult = (patch: Record<string, unknown>) =>
-      admin.from("applications").update({
+    const writeResult = async (patch: Record<string, unknown>) => {
+      const { error } = await admin.from("applications").update({
         ...patch,
         aigc_checked_at: new Date().toISOString(),
         aigc_provider: `aliyun:${service}`,
       }).eq("id", application_id);
+      if (error) throw error;
+    };
 
     // 当 AIGC 跳过 / 出错时，若 AI 评估本意是自动通过，则就此兑现。
     const promoteIfIntended = async () => {
@@ -282,7 +286,7 @@ Deno.serve(async (req) => {
     const { data: signed } = await admin.storage.from("application-files").createSignedUrl(targetPath, 300);
     const imageUrl = signed?.signedUrl;
     if (!imageUrl) {
-      await writeResult({ aigc_status: "error", aigc_detail: { reason: "no signed url" } });
+      await writeResult({ aigc_status: "error", aigc_score: null, aigc_detail: { reason: "no signed url" } });
       await promoteIfIntended();
       return json({ status: "error", note: "无法生成图片访问链接" });
     }
@@ -290,7 +294,7 @@ Deno.serve(async (req) => {
     const aly = await callAliyunImageModeration({ ak, sk, region, service, imageUrl });
     if (!aly.ok || (aly.raw?.Code && aly.raw.Code !== 200)) {
       const msg = `阿里云 [${aly.status}] ${JSON.stringify(aly.raw).slice(0, 300)}`;
-      await writeResult({ aigc_status: "error", aigc_detail: { error: msg, request_id: aly.requestId } });
+      await writeResult({ aigc_status: "error", aigc_score: null, aigc_detail: { error: msg, request_id: aly.requestId } });
       await promoteIfIntended();
       return json({ status: "error", note: msg }, 500);
     }
