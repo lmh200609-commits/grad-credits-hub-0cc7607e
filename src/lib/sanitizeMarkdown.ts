@@ -14,6 +14,34 @@ const DECOR_EMOJI = /[⚠️📎👇✅❌🎉🤖💡⭐️✨📝📌🔔ℹ�
 // 数据库字段/表名 -> 中文显示名。用于把后端泄漏的英文标识翻译成自然中文。
 // 顺序很重要：长 key 必须排在短 key 之前，避免被部分匹配。
 const FIELD_LABELS: Array<[RegExp, string]> = [
+  [/\b(?:ai_check_)?consistency(?:_ok)?\b/g, "材料一致性"],
+  [/\b(?:ai_check_)?relevance(?:_ok)?\b/g, "材料相关性"],
+  [/\b(?:ai_check_)?authenticity(?:_ok)?\b/g, "材料真实性"],
+  [/\b(?:ai_check_)?name_match(?:_ok)?\b/g, "姓名一致性"],
+  [/\b(?:ai_check_)?identity_match(?:_ok)?\b/g, "身份信息一致性"],
+  [/\b(?:ai_check_)?logic(?:_ok)?\b/g, "逻辑合理性"],
+  [/\b(?:ai_check_)?completeness(?:_ok)?\b/g, "材料完整性"],
+  [/\bai_suggested_credit\b/g, "系统建议学分"],
+  [/\bclaimed_credit\b/g, "申报合计学分"],
+  [/\bfinal_credit\b/g, "最终学分"],
+  [/\bai_reasoning_short\b/g, "核对摘要"],
+  [/\bai_reasoning\b/g, "核对理由"],
+  [/\bai_confidence\b/g, "判定确信度"],
+  [/\bai_detected_school\b/g, "识别学校"],
+  [/\bai_detected_student_no\b/g, "识别学号"],
+  [/\bai_override_note\b/g, "系统改判说明"],
+  [/\bteacher_review\b/g, "教师复核"],
+  [/\badmin_review\b/g, "管理员复核"],
+  [/\bai_evaluation\b/g, "系统核验"],
+  [/\bstudent_appeal\b/g, "学生申诉"],
+  [/\breviewer_recall\b/g, "教师撤回"],
+  [/\bauto_approved\b/g, "系统初审通过"],
+  [/\brejected_by_ai\b/g, "系统未通过"],
+  [/\bpending_review\b/g, "待教师复核"],
+  [/\bpending_ai\b/g, "系统核验中"],
+  [/\bapproved\b/g, "已通过"],
+  [/\brejected\b/g, "已驳回"],
+  [/\bAIGC\b/gi, "人工智能生成"],
   [/\bstudent_no\b/g, "学号/工号"],
   [/\bfull_name\b/g, "姓名"],
   [/\bcollege_name\b/g, "学院"],
@@ -49,7 +77,11 @@ const FIELD_LABELS: Array<[RegExp, string]> = [
 export function translateFieldNames(input: string): string {
   if (!input) return "";
   let s = String(input);
+  // Translate boolean comparisons before stripping formatting so the result remains meaningful.
+  s = s.replace(/\b((?:ai_check_)?(?:consistency|relevance|authenticity|name_match|identity_match|logic|completeness)(?:_ok)?)\b["'`\s]*(?:为|是|[:=：])\s*(true|false|null)\b/gi,
+    (_, field: string, value: string) => `${field}：${value.toLowerCase() === "true" ? "符合" : value.toLowerCase() === "false" ? "不符合" : "未给出判断"}`);
   for (const [re, zh] of FIELD_LABELS) s = s.replace(re, zh);
+  s = s.replace(/\bfalse\b/g, "否").replace(/\btrue\b/g, "是").replace(/\bnull\b/g, "未填写");
   return s;
 }
 
@@ -89,6 +121,7 @@ export function sanitizeMarkdown(input: string): string {
 export function toPlainText(input: string): string {
   if (!input) return "";
   let s = String(input);
+  s = s.replace(/```(?:[a-z]+)?\s*\n?/gi, "").replace(/`([^`\n]+)`/g, "$1");
   // 强调符：**bold** / __bold__ / *italic* / _italic_
   s = s.replace(/\*\*([^*\n]+)\*\*/g, "$1");
   s = s.replace(/__([^_\n]+)__/g, "$1");

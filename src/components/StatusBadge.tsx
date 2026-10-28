@@ -31,6 +31,6 @@ const STUDENT_MAP: Record<Status, { label: string; className: string }> = {
 
 export const StatusBadge = ({ status, audience = "staff" }: { status: Status; audience?: Audience }) => {
   const map = audience === "student" ? STUDENT_MAP : STAFF_MAP;
-  const m = map[status] ?? { label: status, className: "" };
+  const m = map[status] ?? { label: audience === "student" ? "待核对" : "状态待确认", className: "" };
   return <Badge variant="outline" className={m.className}>{m.label}</Badge>;
 };

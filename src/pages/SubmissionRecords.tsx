@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sheet";
 import { ExternalLink, ChevronUp, ChevronDown, FileDown, ImageIcon } from "lucide-react";
 import { toPlainText } from "@/lib/sanitizeMarkdown";
+import { applicationDescription } from "@/lib/applicationDisplay";
 
 type Row = {
   id: string;
@@ -279,8 +280,8 @@ const SubmissionRecords = () => {
           {current && (() => {
             const p = profiles.get(current.student_id);
             const allKw = [...(current.selected_keywords ?? []), ...(current.custom_keywords ?? [])].filter(Boolean);
-            const shortReason = current.ai_reasoning_short?.trim()
-              || (current.ai_reasoning ? current.ai_reasoning.slice(0, 80) + (current.ai_reasoning.length > 80 ? "…" : "") : "");
+            const reasonText = toPlainText(current.ai_reasoning_short?.trim() || current.ai_reasoning || "");
+            const shortReason = reasonText.slice(0, 80) + (reasonText.length > 80 ? "…" : "");
             return (
               <>
                 <SheetHeader>
@@ -299,7 +300,7 @@ const SubmissionRecords = () => {
                   <Card>
                     <CardHeader><CardTitle className="text-sm">申请说明</CardTitle></CardHeader>
                     <CardContent>
-                      <p className="whitespace-pre-wrap rounded bg-muted/50 p-3 text-sm">{current.description}</p>
+                      <p className="whitespace-pre-wrap break-words rounded bg-muted/50 p-3 text-sm">{applicationDescription(current.description)}</p>
                     </CardContent>
                   </Card>
 
@@ -377,7 +378,7 @@ const SubmissionRecords = () => {
                     <CardContent className="space-y-1 text-sm">
                       <div>最终学分：<span className="font-medium">{displayFinal(current.status, current.final_credit) ?? "—"}</span></div>
                       {current.final_review_note && (
-                        <div className="text-muted-foreground">复核备注：{current.final_review_note}</div>
+                         <div className="text-muted-foreground">复核备注：{toPlainText(current.final_review_note)}</div>
                       )}
                     </CardContent>
                   </Card>
@@ -393,13 +394,13 @@ const SubmissionRecords = () => {
                             <Badge variant="outline" className="text-xs">
                               {r.action === "ai_evaluation" ? "系统核验"
                                 : r.action === "teacher_review" ? "教师复核"
-                                : r.action === "admin_review" ? "管理员复核" : r.action}
+                                : r.action === "admin_review" ? "管理员复核" : toPlainText(r.action) === r.action ? "其他审核操作" : toPlainText(r.action)}
                             </Badge>
                             <StatusBadge status={r.decision as any} />
                             {r.credit != null && <span className="text-muted-foreground">学分 {r.credit}</span>}
                             <span className="ml-auto text-muted-foreground">{new Date(r.created_at).toLocaleString("zh-CN", { hour12: false })}</span>
                           </div>
-                          {r.note && <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{r.note}</p>}
+                          {r.note && <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{toPlainText(r.note)}</p>}
                         </div>
                       ))}
                     </CardContent>
