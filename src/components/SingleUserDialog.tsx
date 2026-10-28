@@ -14,6 +14,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toast } from "sonner";
 import { buildPassword, type ParsedRow } from "@/lib/parseRoster";
 import { YmdPicker } from "@/components/ui/ymd-picker";
+import { displayError } from "@/lib/displayText";
 
 type Props = {
   open: boolean;
@@ -90,7 +91,7 @@ const SingleUserDialog = ({ open, role, onClose, onDone }: Props) => {
     if (f.gender && !["男", "女"].includes(f.gender.trim())) return "性别只能是「男」或「女」";
     if (f.birth_date) {
       const m = f.birth_date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if (!m) return "出生日期格式应为 YYYY-MM-DD";
+      if (!m) return "出生日期请按年-月-日填写，例如 2004-09-01";
     }
     if (f.enrollment_year) {
       const y = Number(f.enrollment_year);
@@ -149,7 +150,7 @@ const SingleUserDialog = ({ open, role, onClose, onDone }: Props) => {
           detail = j.errors?.[0]?.message ?? j.conflicts?.[0] ?? j.error ?? detail;
         }
       } catch {}
-      toast.error(`创建失败：${detail}`);
+      toast.error(displayError(String(detail || "创建失败，请稍后重试")));
       return;
     }
     toast.success(`已创建账号：${f.full_name}（默认密码 = 学号 + 手机号后 6 位）`);

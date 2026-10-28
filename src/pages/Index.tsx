@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { resolveDisplayName } from "@/lib/displayName";
 import { deserializeItems } from "@/lib/parseForm";
+import { applicationDescription } from "@/lib/applicationDisplay";
 import {
   ClipboardCheck, FileText, Send, Users, Inbox, CheckCircle2, XCircle,
   Clock, ArrowRight, Sparkles, FileCheck,
@@ -26,7 +27,7 @@ const appTitle = (description: string) => {
     const t = items.map((it) => it.achievement).filter(Boolean).slice(0, 2).join(" · ");
     if (t) return t;
   }
-  return description?.trim() ? description.trim().slice(0, 40) : "未命名申请";
+  return applicationDescription(description, true).slice(0, 40);
 };
 
 type AppRow = {

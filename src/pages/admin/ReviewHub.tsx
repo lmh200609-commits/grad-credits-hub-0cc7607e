@@ -27,6 +27,7 @@ import TablePagination from "@/components/TablePagination";
 import { toast } from "@/hooks/use-toast";
 import { decideBatch } from "@/lib/applicationActions";
 import { deleteApplication } from "@/lib/deleteApplication";
+import { applicationDescription } from "@/lib/applicationDisplay";
 import {
   CheckCircle2, XCircle, Clock, ShieldCheck, ShieldX, Sparkles, ExternalLink, Check, X, Trash2,
 } from "lucide-react";
@@ -364,7 +365,7 @@ const ReviewHub = () => {
                         <TableCell className="max-w-xs truncate">
                           {r.achievement_name
                             ? `${r.achievement_name}${r.level_name ? `（${r.level_name}）` : ""}`
-                            : r.description}
+                            : applicationDescription(r.description, true)}
                         </TableCell>
                         <TableCell>{rejectedDisplay ? 0 : (r.final_credit ?? r.claimed_credit ?? r.ai_suggested_credit ?? "—")}</TableCell>
                         <TableCell>

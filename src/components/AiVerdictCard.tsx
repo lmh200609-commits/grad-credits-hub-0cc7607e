@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, MinusCircle, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toPlainText } from "@/lib/sanitizeMarkdown";
+import { displayReason } from "@/lib/displayText";
 
 export type AiVerdict = {
   status: string;
@@ -167,21 +167,21 @@ export function AiVerdictCard({ app }: { app: AiVerdict }) {
               ok={app.ai_check_identity_match}
               label="身份信息一致性"
               okText="材料中的学号 / 院系 / 班级 / 身份证 / 学校均与账号一致"
-              failText={app.ai_identity_mismatch || "材料中的身份信息与账号不符"}
+              failText={displayReason(app.ai_identity_mismatch) || "材料中的身份信息与账号不符"}
               unknownText="材料未包含可核验的身份信息"
             />
             <CheckRow
               ok={app.ai_check_logic}
               label="逻辑合理性"
               okText="未发现常识性 / 数值 / 时间逻辑错误"
-              failText={app.ai_logic_issue || "材料存在逻辑性错误"}
+              failText={displayReason(app.ai_logic_issue) || "材料存在逻辑性错误"}
               unknownText="未给出判断"
             />
             <CheckRow
               ok={app.ai_check_completeness}
               label="材料完整性"
               okText="关键字段（学校 / 院系 / 班级 / 姓名 / 学号 等）均已填写"
-              failText={app.ai_blank_fields ? `存在空白未填写字段：${app.ai_blank_fields}` : "材料存在空白未填写字段"}
+              failText={app.ai_blank_fields ? `存在空白未填写字段：${displayReason(app.ai_blank_fields)}` : "材料存在空白未填写字段"}
               unknownText="未给出判断"
             />
           </div>
@@ -206,7 +206,7 @@ export function AiVerdictCard({ app }: { app: AiVerdict }) {
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
             <div>
               <div className="font-medium text-warning">系统强制改判</div>
-              <div className="mt-1 text-foreground">{toPlainText(app.ai_override_note)}</div>
+              <div className="mt-1 text-foreground">{displayReason(app.ai_override_note)}</div>
             </div>
           </div>
         )}
@@ -214,7 +214,7 @@ export function AiVerdictCard({ app }: { app: AiVerdict }) {
         <div>
           <div className="mb-1 text-xs font-medium text-muted-foreground">详细理由</div>
           <p className="whitespace-pre-wrap rounded bg-muted/50 p-3 text-sm leading-relaxed">
-            {app.ai_reasoning ? toPlainText(app.ai_reasoning) : "系统未给出详细理由。"}
+            {app.ai_reasoning ? displayReason(app.ai_reasoning) : "系统未给出详细理由。"}
           </p>
         </div>
       </CardContent>

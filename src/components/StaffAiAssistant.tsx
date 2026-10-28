@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import AssistantMessage from "@/components/AssistantMessage";
+import { displayLabel } from "@/lib/displayText";
 import {
   useStaffAssistantStore,
   staffAssistantActions,
@@ -256,7 +257,7 @@ const StaffAiAssistant = () => {
                         <div className="mt-1 flex flex-col gap-0.5">
                           {Object.entries(m.stats.value as Record<string, number>).map(([k, v]) => (
                             <div key={k} className="flex items-center justify-between">
-                              <span className="text-muted-foreground">{STATUS_LABELS[k] ?? k}</span>
+                              <span className="text-muted-foreground">{STATUS_LABELS[k] ?? displayLabel(k)}</span>
                               <span className="font-semibold">{v}</span>
                             </div>
                           ))}

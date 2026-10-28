@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import EmptyState from "@/components/EmptyState";
 import TableSkeleton from "@/components/TableSkeleton";
 import TablePagination from "@/components/TablePagination";
+import { applicationDescription } from "@/lib/applicationDisplay";
 
 type Row = {
   id: string;
@@ -248,7 +249,7 @@ const ReviewsList = () => {
                       <TableCell className="max-w-xs truncate">
                         {r.achievement_name
                           ? `${r.achievement_name}${r.level_name ? `（${r.level_name}）` : ""}`
-                          : r.description}
+                          : applicationDescription(r.description, true)}
                       </TableCell>
                       <TableCell>
                         {rejectedDisplay ? 0 : (() => {

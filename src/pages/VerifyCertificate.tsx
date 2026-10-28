@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { displayError } from "@/lib/displayText";
 
 type VerifyResult =
   | { ok: true; student_name: string; student_no: string; school: string; department: string | null; credit: number; project: string; issued_at: string; certificate_no: string }
@@ -48,7 +49,7 @@ const VerifyCertificate = () => {
             </>
           )}
           {r && !r.ok && "error" in r && (
-            <p className="text-destructive">{r.error}</p>
+            <p className="text-destructive">{displayError(r.error)}</p>
           )}
         </CardContent>
       </Card>
