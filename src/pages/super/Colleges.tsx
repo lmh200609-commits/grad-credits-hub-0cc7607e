@@ -38,6 +38,19 @@ const Colleges = () => {
   const [form, setForm] = useState({ ...emptyForm });
   const [saving, setSaving] = useState(false);
   const [pendingDisable, setPendingDisable] = useState<College | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<College | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const doDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    const { error } = await supabase.rpc("delete_college" as never, { _college: pendingDelete.id } as never);
+    setDeleting(false);
+    setPendingDelete(null);
+    if (error) { toast.error(error.message || "删除失败"); return; }
+    toast.success("学院已删除");
+    void load();
+  };
 
   const load = async () => {
     setLoading(true);
@@ -144,7 +157,10 @@ const Colleges = () => {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" variant="outline" onClick={() => openEdit(c)}>编辑</Button>
+                        <div className="flex justify-end gap-2">
+                          <Button size="sm" variant="outline" onClick={() => openEdit(c)}>编辑</Button>
+                          <Button size="sm" variant="destructive" onClick={() => setPendingDelete(c)}>删除</Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -164,6 +180,22 @@ const Colleges = () => {
               <AlertDialogCancel>取消</AlertDialogCancel>
               <AlertDialogAction onClick={() => { if (pendingDisable) { void setActive(pendingDisable, false); setPendingDisable(null); } }}>
                 确认停用
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>删除学院 “{pendingDelete?.name}”？</AlertDialogTitle>
+              <AlertDialogDescription>
+                删除后不能恢复。学院下还有账号或申请时系统会拒绝删除，请改为停用。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>取消</AlertDialogCancel>
+              <AlertDialogAction disabled={deleting} onClick={(e) => { e.preventDefault(); void doDelete(); }}>
+                {deleting ? "删除中…" : "确认删除"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

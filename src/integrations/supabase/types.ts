@@ -1375,6 +1375,7 @@ export type Database = {
         }[]
       }
       delete_application: { Args: { _app_id: string }; Returns: string[] }
+      delete_college: { Args: { _college: string }; Returns: string }
       gen_certificate_no: { Args: { _app_id: string }; Returns: string }
       get_student_credit_ranking: {
         Args: never
