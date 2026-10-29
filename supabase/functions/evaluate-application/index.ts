@@ -182,27 +182,35 @@ Deno.serve(async (req) => {
       return data.signedUrl;
     };
 
-    let attachPaths: string[] = [];
+    // 每份佐证都要交给模型：先取每份的第 1 页，再补后续页，总数上限 12 张；每张图前标注对应证书名。
+    const MAX_IMAGES = 12;
+    const imageLabels: string[] = [];
+    let attachPaths: { path: string; label: string }[] = [];
     if (claimedItems.length) {
       const { data: atts } = await admin
         .from("application_attachments")
-        .select("file_path")
+        .select("file_path, file_name, cert_name")
         .eq("application_id", application_id)
         .order("sort_order", { ascending: true })
-        .limit(4);
-      // PDF 佐证：使用提交时渲染好的页面图片（<pdf>.p1.jpg ~ .p4.jpg）
-      attachPaths = (atts ?? []).flatMap((a) =>
-        /\.pdf$/i.test(a.file_path)
-          ? [1, 2, 3, 4].map((n) => `${a.file_path}.p${n}.jpg`)
-          : IMAGE_EXT.test(a.file_path) ? [a.file_path] : []);
+        .limit(30);
+      const evid = (atts ?? []).filter((a) => /\.pdf$/i.test(a.file_path) || IMAGE_EXT.test(a.file_path));
+      const labelOf = (a: { cert_name: string | null; file_name: string | null }, i: number) =>
+        `佐证${i + 1}：${a.cert_name || a.file_name || "未命名"}`;
+      const pages = [1, 2, 3, 4];
+      for (const n of pages) {
+        evid.forEach((a, i) => {
+          if (/\.pdf$/i.test(a.file_path)) attachPaths.push({ path: `${a.file_path}.p${n}.jpg`, label: `${labelOf(a, i)}（第${n}页）` });
+          else if (n === 1) attachPaths.push({ path: a.file_path, label: labelOf(a, i) });
+        });
+      }
     }
     if (attachPaths.length === 0 && app.file_path && IMAGE_EXT.test(app.file_path)) {
-      attachPaths = [app.file_path];
+      attachPaths = [{ path: app.file_path, label: "佐证1" }];
     }
     for (const p of attachPaths) {
-      if (imageDataUrls.length >= 8) break;
-      const d = await toDataUrl(p);
-      if (d) imageDataUrls.push(d);
+      if (imageDataUrls.length >= MAX_IMAGES) break;
+      const d = await toDataUrl(p.path);
+      if (d) { imageDataUrls.push(d); imageLabels.push(p.label); }
     }
     const imageDataUrl = imageDataUrls[0] ?? null; // 供既有兜底逻辑判断
     if (imageDataUrls.length) {
@@ -282,7 +290,12 @@ reasoning_short：一句话（≤60 字）给学生看，只点出"是否通过 
 
 【填表申请专项核验 — 本申请为学生填表提交，必须严格执行】
 - application.claimed_items 是学生在《创新实践学分认定申请表》中逐条填报的条目（含大类/认定项目/成果名称/级别/本人排名/自报学分），后面的每张图片均为佐证材料。
-- 逐条比对：佐证图片上的成果名称、级别、姓名、排名是否与填报条目相符；任何一条找不到对应佐证或关键信息不符 → consistency_ok = false，并在 reasoning 中写明是第几条、差在哪。
+- 每张图片前都有文字标注【佐证N：证书名（第N页）】，按证书名把图片对应到填报条目，同一证书的多页要合并查看；不要因图片顺序与条目顺序不同而判定缺少佐证。
+- 逐条比对：佐证图片上的成果名称、级别、姓名、排名是否与填报条目相符；佐证明确与条目矛盾（奖次不同、姓名不同等）→ consistency_ok = false，并写明是第几条、差在哪。
+- 某条的佐证图片看不清、或确实没有找到对应图片 → 不得判定造假或 consistency_ok=false，该条写「待老师核对原件」，recommendation=review。
+- 立项名单、目录等需要外部查询才能确认的，查不到不作为驳回依据，写「待老师核对」。
+- 证书上未写本人角色（负责人/成员）时，按学生填报的角色写「角色待老师核对」，不作为驳回依据。
+- SIYB/SYB 创业培训合格证书一律按 4 分认定。
 - 姓名/学号等身份信息以佐证图片为准与 student_profile 比对（identity 规则同上）。
 - 学分合规：以图片真实级别与排名对照上述《长春财经学院创新实践学分认定标准》，逐条独立判断，学生传入的credit_standard_total仅参考。超标或偏低在credit_compliance_note写明，如「第2条自报10分，国家级B类一等奖团队负责人标准为8分」。无法判断填「待人工核定」。仅学分差异不得将consistency_ok或logic_ok判为false；材料真实且只有学分差异/条件待核定时recommendation=review，由教师最终定分。
 - reasoning 结构改为：「逐条核验：第 1 条…；第 2 条…；身份核验：…；学分合规：…；结论：…」。
@@ -323,9 +336,10 @@ reasoning_short：一句话（≤60 字）给学生看，只点出"是否通过 
     };
 
     const userContent: unknown[] = [{ type: "text", text: JSON.stringify(userPayload) }];
-    for (const u of imageDataUrls) {
+    imageDataUrls.forEach((u, i) => {
+      userContent.push({ type: "text", text: `下一张图片是【${imageLabels[i] ?? `佐证${i + 1}`}】` });
       userContent.push({ type: "image_url", image_url: { url: u } });
-    }
+    });
 
     const tools = [
       {

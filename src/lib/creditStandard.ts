@@ -143,6 +143,11 @@ function lookupOnce(input: LookupInput, catalogs: Catalogs): StandardLookup {
     return fail;
   }
 
+  // SIYB/SYB 创业培训合格证书：学院规定一律 4 分
+  if (/S?IYB|SYB|创业培训合格/i.test(proj + achieve + input.level + (cert?.name ?? ""))) {
+    return ok(4, `${basisHead}·SIYB/SYB创业培训合格证书`);
+  }
+
   // ============ 二、创新创业 ============
   if (has(cat, "创新创业", "创业")) {
     // 大创

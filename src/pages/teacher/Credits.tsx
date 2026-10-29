@@ -123,15 +123,13 @@ const Credits = () => {
   const maxCredit = useMemo(() => rows.reduce((m, r) => Math.max(m, r.total_credit), 0), [rows]);
 
   const exportXlsx = () => {
-    const header = ["序号", "姓名", "学号", "院系", "专业", "班级", "通过申请数", "累计学分", "成绩等级", "是否合格"];
-    const data = filtered.map((r) => [
-      r.rank, r.full_name ?? "", r.student_no ?? "", r.department ?? "",
-      r.major ?? "", r.class_name ?? "", r.approved_count, Number(r.total_credit.toFixed(1)),
-      gradeOf(r.total_credit).label,
-      r.total_credit >= PASS_THRESHOLD ? "合格" : "不合格",
+    const header = ["序号", "学院", "专业", "班级", "姓名", "学号", "认定总学分", "认定成绩等级"];
+    const data = filtered.map((r, i) => [
+      i + 1, r.department ?? "", r.major ?? "", r.class_name ?? "", r.full_name ?? "", r.student_no ?? "",
+      Number(r.total_credit.toFixed(1)), gradeOf(r.total_credit).label,
     ]);
     const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
-    ws["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
+    ws["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 10 }, { wch: 12 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "学分统计");
     const tag = passFilter === "pass" ? "合格" : passFilter === "fail" ? "不合格" : "全部";

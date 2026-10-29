@@ -134,14 +134,13 @@ const Credits = () => {
   const maxCredit = useMemo(() => rows.reduce((m, r) => Math.max(m, r.total_credit), 0), [rows]);
 
   const exportXlsx = () => {
-    const header = ["序号", "姓名", "学号", "院系", "专业", "班级", "通过申请数", "累计学分", "认定成绩等级", "是否合格"];
-    const data = filtered.map((r) => [
-      r.rank, r.full_name ?? "", r.student_no ?? "", r.department ?? "",
-      r.major ?? "", r.class_name ?? "", r.approved_count, Number(r.total_credit.toFixed(1)), gradeOf(r.total_credit).label,
-      r.total_credit >= PASS_THRESHOLD ? "合格" : "不合格",
+    const header = ["序号", "学院", "专业", "班级", "姓名", "学号", "认定总学分", "认定成绩等级"];
+    const data = filtered.map((r, i) => [
+      i + 1, r.department ?? "", r.major ?? "", r.class_name ?? "", r.full_name ?? "", r.student_no ?? "",
+      Number(r.total_credit.toFixed(1)), gradeOf(r.total_credit).label,
     ]);
     const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
-    ws["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 16 }, { wch: 10 }, { wch: 10 }, { wch: 10 }];
+    ws["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 12 }, { wch: 14 }, { wch: 10 }, { wch: 12 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "学分统计");
     const tag = passFilter === "pass" ? "合格" : passFilter === "fail" ? "不合格" : "全部";
@@ -269,39 +268,31 @@ const Credits = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-16">序号</TableHead>
-                  <TableHead>姓名</TableHead>
-                  <TableHead>学号</TableHead>
-                  <TableHead>院系</TableHead>
+                  <TableHead>学院</TableHead>
                   <TableHead>专业</TableHead>
                   <TableHead>班级</TableHead>
-                  <TableHead className="text-right">通过申请</TableHead>
-                  <TableHead className="text-right">累计学分</TableHead>
-                  <TableHead className="text-center">认定等级</TableHead>
-                  <TableHead className="text-center">是否合格</TableHead>
+                  <TableHead>姓名</TableHead>
+                  <TableHead>学号</TableHead>
+                  <TableHead className="text-right">认定总学分</TableHead>
+                  <TableHead className="text-center">认定成绩等级</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground">暂无数据</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">暂无数据</TableCell></TableRow>
                 ) : paged.map((r) => {
                   const passed = r.total_credit >= PASS_THRESHOLD;
                   return (
                   <TableRow key={r.user_id} className={!passed ? "bg-danger/5 hover:bg-danger/10" : "hover:bg-muted/40"}>
-                    <TableCell className="font-mono text-muted-foreground">{r.rank}</TableCell>
-                    <TableCell className="font-medium">{r.full_name ?? "—"}</TableCell>
-                    <TableCell>{r.student_no ?? "—"}</TableCell>
+                    <TableCell className="font-mono text-muted-foreground">{page * PAGE_SIZE + paged.indexOf(r) + 1}</TableCell>
                     <TableCell>{r.department ?? "—"}</TableCell>
                     <TableCell>{r.major ?? "—"}</TableCell>
                     <TableCell>{r.class_name ?? "—"}</TableCell>
-                    <TableCell className="text-right">{r.approved_count}</TableCell>
+                    <TableCell className="font-medium">{r.full_name ?? "—"}</TableCell>
+                    <TableCell>{r.student_no ?? "—"}</TableCell>
                     <TableCell className={`text-right font-semibold ${passed ? "text-success" : "text-danger"}`}>{r.total_credit.toFixed(1)}</TableCell>
                     <TableCell className="text-center">{gradeOf(r.total_credit).label}</TableCell>
-                    <TableCell className="text-center">
-                      <span className={`rounded px-2 py-0.5 text-xs font-medium ${passed ? "bg-success/15 text-success" : "bg-danger/15 text-danger"}`}>
-                        {passed ? "合格" : "不合格"}
-                      </span>
-                    </TableCell>
                     <TableCell className="text-right">
                       <Button asChild variant="outline" size="sm">
                         <Link to={`/teacher/students/${r.user_id}`}>详情</Link>
