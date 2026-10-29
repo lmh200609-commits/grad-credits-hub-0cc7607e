@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
       if (parsed && Array.isArray(parsed.items)) claimedItems = parsed.items;
     } catch { /* 旧数据：纯文本说明 */ }
 
-    // 下载附件图片（新版：application_attachments 多张，最多取 4 张；旧版回退单张 file_path）
+    // 下载附件图片（新版：application_attachments 多张，每份 PDF 最多 10 页；旧版回退单张 file_path）
     const imageDataUrls: string[] = [];
     let attachmentNote = "无附件";
     // 用临时签名链接交给模型读取，避免在函数里把大图转成 base64（会耗尽计算资源导致核对失败）。
@@ -182,8 +182,8 @@ Deno.serve(async (req) => {
       return data.signedUrl;
     };
 
-    // 每份佐证都要交给模型：先取每份的第 1 页，再补后续页，总数上限 12 张；每张图前标注对应证书名。
-    const MAX_IMAGES = 12;
+    // 每份佐证都要交给模型：先取每份的第 1 页，再补后续页，总数上限 30 张；每张图前标注对应证书名。
+    const MAX_IMAGES = 30;
     const imageLabels: string[] = [];
     let attachPaths: { path: string; label: string }[] = [];
     if (claimedItems.length) {
@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
       const evid = (atts ?? []).filter((a) => /\.pdf$/i.test(a.file_path) || IMAGE_EXT.test(a.file_path));
       const labelOf = (a: { cert_name: string | null; file_name: string | null }, i: number) =>
         `佐证${i + 1}：${a.cert_name || a.file_name || "未命名"}`;
-      const pages = [1, 2, 3, 4];
+      const pages = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
       for (const n of pages) {
         evid.forEach((a, i) => {
           if (/\.pdf$/i.test(a.file_path)) attachPaths.push({ path: `${a.file_path}.p${n}.jpg`, label: `${labelOf(a, i)}（第${n}页）` });

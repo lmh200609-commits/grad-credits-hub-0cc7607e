@@ -4,7 +4,7 @@ import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
-export const PDF_PREVIEW_PAGES = 4;
+export const PDF_PREVIEW_PAGES = 10;
 /** 预览图路径：<pdf路径>.p<页码>.jpg */
 export const pdfPreviewPath = (pdfPath: string, page: number) => `${pdfPath}.p${page}.jpg`;
 /** 预览图对应的 PDF 原件路径；不是预览图则返回 null */
@@ -19,7 +19,7 @@ export async function renderPdfPages(file: File, maxPages = PDF_PREVIEW_PAGES): 
       let scale = 250 / 72;
       const base = page.getViewport({ scale: 1 });
       const longest = Math.max(base.width, base.height) * scale;
-      if (longest > 3000) scale *= 3000 / longest; // 控制体积
+      if (longest > 2400) scale *= 2400 / longest; // 控制体积
       const vp = page.getViewport({ scale });
       const canvas = document.createElement("canvas");
       canvas.width = Math.ceil(vp.width);
