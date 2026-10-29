@@ -64,9 +64,12 @@ const Admins = () => {
   };
 
   const removeAdmin = async (r: AdminRow) => {
-    const { error } = await supabase.from("user_roles")
-      .delete().eq("user_id", r.user_id).eq("role", "admin");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.id === r.user_id) { toast.error("不能移除自己的管理员权限"); return; }
+    const { data, error } = await supabase.from("user_roles")
+      .delete().eq("user_id", r.user_id).eq("role", "admin").select("id");
     if (error) { toastError(error); return; }
+    if (!data?.length) { toast.error("没有权限移除该管理员，或该管理员已被移除"); void load(); return; }
     toast.success("已撤销管理员权限");
     void load();
   };
