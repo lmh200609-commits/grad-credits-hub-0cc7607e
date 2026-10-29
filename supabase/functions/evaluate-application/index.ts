@@ -182,27 +182,35 @@ Deno.serve(async (req) => {
       return data.signedUrl;
     };
 
-    let attachPaths: string[] = [];
+    // 每份佐证都要交给模型：先取每份的第 1 页，再补后续页，总数上限 12 张；每张图前标注对应证书名。
+    const MAX_IMAGES = 12;
+    const imageLabels: string[] = [];
+    let attachPaths: { path: string; label: string }[] = [];
     if (claimedItems.length) {
       const { data: atts } = await admin
         .from("application_attachments")
-        .select("file_path")
+        .select("file_path, file_name, cert_name")
         .eq("application_id", application_id)
         .order("sort_order", { ascending: true })
-        .limit(4);
-      // PDF 佐证：使用提交时渲染好的页面图片（<pdf>.p1.jpg ~ .p4.jpg）
-      attachPaths = (atts ?? []).flatMap((a) =>
-        /\.pdf$/i.test(a.file_path)
-          ? [1, 2, 3, 4].map((n) => `${a.file_path}.p${n}.jpg`)
-          : IMAGE_EXT.test(a.file_path) ? [a.file_path] : []);
+        .limit(30);
+      const evid = (atts ?? []).filter((a) => /\.pdf$/i.test(a.file_path) || IMAGE_EXT.test(a.file_path));
+      const labelOf = (a: { cert_name: string | null; file_name: string | null }, i: number) =>
+        `佐证${i + 1}：${a.cert_name || a.file_name || "未命名"}`;
+      const pages = [1, 2, 3, 4];
+      for (const n of pages) {
+        evid.forEach((a, i) => {
+          if (/\.pdf$/i.test(a.file_path)) attachPaths.push({ path: `${a.file_path}.p${n}.jpg`, label: `${labelOf(a, i)}（第${n}页）` });
+          else if (n === 1) attachPaths.push({ path: a.file_path, label: labelOf(a, i) });
+        });
+      }
     }
     if (attachPaths.length === 0 && app.file_path && IMAGE_EXT.test(app.file_path)) {
-      attachPaths = [app.file_path];
+      attachPaths = [{ path: app.file_path, label: "佐证1" }];
     }
     for (const p of attachPaths) {
-      if (imageDataUrls.length >= 8) break;
-      const d = await toDataUrl(p);
-      if (d) imageDataUrls.push(d);
+      if (imageDataUrls.length >= MAX_IMAGES) break;
+      const d = await toDataUrl(p.path);
+      if (d) { imageDataUrls.push(d); imageLabels.push(p.label); }
     }
     const imageDataUrl = imageDataUrls[0] ?? null; // 供既有兜底逻辑判断
     if (imageDataUrls.length) {
@@ -323,9 +331,10 @@ reasoning_short：一句话（≤60 字）给学生看，只点出"是否通过 
     };
 
     const userContent: unknown[] = [{ type: "text", text: JSON.stringify(userPayload) }];
-    for (const u of imageDataUrls) {
+    imageDataUrls.forEach((u, i) => {
+      userContent.push({ type: "text", text: `下一张图片是【${imageLabels[i] ?? `佐证${i + 1}`}】` });
       userContent.push({ type: "image_url", image_url: { url: u } });
-    }
+    });
 
     const tools = [
       {
