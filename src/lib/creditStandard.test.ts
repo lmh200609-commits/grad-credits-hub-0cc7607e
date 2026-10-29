@@ -89,3 +89,9 @@ describe("上传的四张学分认定标准表", () => {
   it("仅国家级但项目类型不明不能推定8分", () => expect(lookup("教学科研", "教学科研项目", "国家级", "其他参与人").credit).toBeNull());
   it("指导教师第一且学生通讯作者视为第一", () => expect(lookup("教学科研", "发表论文", "SCI", "指导教师第一作者，学生通讯作者").credit).toBe(10));
 });
+describe("SIYB/SYB 创业培训证书", () => {
+  it("一律认定 4 分", () => {
+    expect(lookup("职业技能", "SIYB创业培训合格证书", "社会机构", "个人").credit).toBe(4);
+    expect(lookup("创新创业", "SYB创业培训", "", "个人").credit).toBe(4);
+  });
+});
