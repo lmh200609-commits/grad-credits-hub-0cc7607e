@@ -77,7 +77,7 @@ const Login = () => {
       <div className="relative z-10 w-full flex items-center justify-center md:justify-end md:pr-20 lg:pr-32">
       <Card className="w-full max-w-md backdrop-blur-md bg-card/85 border-white/40 shadow-xl">
         <CardHeader className="space-y-2 text-center">
-          <CardTitle className="text-2xl">本科生创新实践学分认定系统</CardTitle>
+          <CardTitle className="text-2xl">长春财经学院国际经济贸易学院本科生创新实践学分认定系统</CardTitle>
           <CardDescription>请使用管理员分配的账号登录</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
