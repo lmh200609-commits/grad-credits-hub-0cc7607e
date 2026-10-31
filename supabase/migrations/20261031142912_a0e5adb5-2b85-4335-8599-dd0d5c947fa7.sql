@@ -1,0 +1,1 @@
+UPDATE public.colleges SET system_title = '长春财经学院国际经济贸易学院本科生创新实践学分认定系统';
