@@ -554,7 +554,7 @@ const ApplicationDetail = () => {
       const tag = orientation === "portrait" ? "竖版" : "横版";
       await exportElementToPdf(
         node,
-        `学分认定证明_${student.student_no}_${certData.certificateNo}_${tag}.pdf`,
+        `创新实践学分认定证明_${student.student_no}_${certData.certificateNo}_${tag}.pdf`,
         orientation,
       );
       toast({ title: "证明已导出", description: `证书编号：${certData.certificateNo}` });

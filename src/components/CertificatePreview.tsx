@@ -1,4 +1,39 @@
 import { forwardRef } from "react";
+import { gradeOf } from "@/lib/creditStandard";
+
+const SEAL_TEXT = "长春财经学院国际经济贸易学院";
+const Seal = () => {
+  const r = 62;
+  const chars = SEAL_TEXT.split("");
+  const span = 250;
+  return (
+    <svg
+      width={160}
+      height={160}
+      viewBox="0 0 160 160"
+      style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-55%) rotate(-8deg)", opacity: 0.82, pointerEvents: "none" }}
+    >
+      <circle cx="80" cy="80" r="74" fill="none" stroke="#d11a1a" strokeWidth="4" />
+      {chars.map((c, i) => {
+        const a = (-span / 2 + (span / (chars.length - 1)) * i) * (Math.PI / 180);
+        const x = 80 + r * Math.sin(a);
+        const y = 80 - r * Math.cos(a);
+        return (
+          <text key={i} x={x} y={y} fill="#d11a1a" fontSize="15" fontWeight="700" textAnchor="middle" dominantBaseline="middle"
+            transform={`rotate(${(a * 180) / Math.PI} ${x} ${y})`}>{c}</text>
+        );
+      })}
+      <polygon
+        fill="#d11a1a"
+        points={Array.from({ length: 10 }, (_, i) => {
+          const rr = i % 2 === 0 ? 24 : 10;
+          const a = (Math.PI / 5) * i - Math.PI / 2;
+          return `${80 + rr * Math.cos(a)},${84 + rr * Math.sin(a)}`;
+        }).join(" ")}
+      />
+    </svg>
+  );
+};
 
 export type CertificateData = {
   school: string;
@@ -62,19 +97,19 @@ const CertificatePreview = forwardRef<
       >
         {/* 顶部 */}
         <div style={{ textAlign: "center", marginBottom: isPortrait ? 32 : 24 }}>
-          <div style={{ fontSize: isPortrait ? 28 : 30, fontWeight: 700, letterSpacing: 4, color: "#8b1c1c" }}>
-            {data.school}
+          <div style={{ fontSize: isPortrait ? 26 : 28, fontWeight: 700, letterSpacing: 3, color: "#8b1c1c" }}>
+            长春财经学院2027届本科生
           </div>
           <div
             style={{
-              fontSize: isPortrait ? 38 : 42,
+              fontSize: isPortrait ? 34 : 38,
               fontWeight: 800,
-              letterSpacing: isPortrait ? 10 : 12,
+              letterSpacing: isPortrait ? 6 : 8,
               marginTop: 8,
               color: "#1a1a1a",
             }}
           >
-            学 分 认 定 证 明
+            创新实践学分认定证明
           </div>
           <div style={{ marginTop: 12, fontSize: 14, color: "#6b6b6b" }}>
             CREDIT CERTIFICATION · 证书编号：{data.certificateNo}
@@ -137,42 +172,45 @@ const CertificatePreview = forwardRef<
         <div
           style={{
             marginTop: isPortrait ? 40 : 28,
-            fontSize: isPortrait ? 17 : 18,
-            lineHeight: 2,
+            fontSize: isPortrait ? 18 : 19,
+            lineHeight: 2.2,
             textIndent: "2em",
           }}
         >
-          兹证明上述学生在校期间，因
-          <span style={{ fontWeight: 700, color: "#8b1c1c", margin: "0 6px" }}>
-            {data.projectTitle || "—"}
+          经长春财经学院国际经济贸易学院创新实践学分认定工作组审核，认定授予创新实践学分等级
+          <span
+            style={{
+              fontWeight: 900,
+              fontSize: 32,
+              color: "#8b1c1c",
+              margin: "0 18px",
+              padding: "0 10px",
+              letterSpacing: 6,
+              borderBottom: "3px solid #8b1c1c",
+              fontFamily: '"STKaiti","KaiTi","楷体",serif',
+            }}
+          >
+            {gradeOf(Number(data.credit) || 0).label}
           </span>
-          经学校学分认定委员会审核，认定授予创新创业学分
-          <span style={{ fontWeight: 800, fontSize: 22, color: "#8b1c1c", margin: "0 6px" }}>
-            {data.credit}
-          </span>
-          分，特此证明。
+          。
         </div>
+        <div style={{ marginTop: 16, fontSize: isPortrait ? 18 : 19, textIndent: "2em" }}>特此证明。</div>
 
         {/* 底部签发信息 */}
         <div
           style={{
             position: "absolute",
-            left: isPortrait ? 48 : 56,
-            right: isPortrait ? 48 : 56,
-            bottom: isPortrait ? 60 : 56,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
+            right: isPortrait ? 64 : 80,
+            bottom: isPortrait ? 80 : 64,
+            textAlign: "center",
+            fontSize: 16,
+            lineHeight: 2,
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {/* 二维码已移除 */}
-          </div>
-
-          <div style={{ textAlign: "right", fontSize: 15, lineHeight: 1.8 }}>
-            <div>签发单位：{data.school} 教务处</div>
-            {data.reviewerName && <div>审核人：{data.reviewerName}</div>}
-            <div>签发日期：{fmtDate(data.issuedAt)}</div>
+          <div style={{ position: "relative" }}>
+            <Seal />
+            <div style={{ position: "relative" }}>长春财经学院国际经济贸易学院</div>
+            <div style={{ position: "relative" }}>{fmtDate(data.issuedAt)}</div>
           </div>
         </div>
       </div>
