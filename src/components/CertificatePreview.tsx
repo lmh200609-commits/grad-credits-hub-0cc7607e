@@ -2,7 +2,8 @@ import { forwardRef } from "react";
 import { gradeOf } from "@/lib/creditStandard";
 
 const SEAL_TEXT = "长春财经学院国际经济贸易学院";
-const Seal = () => {
+// 电子公章暂不使用（改为打印后统一线下盖章）
+export const Seal = () => {
   const r = 62;
   const chars = SEAL_TEXT.split("");
   const span = 250;
@@ -196,6 +197,20 @@ const CertificatePreview = forwardRef<
         </div>
         <div style={{ marginTop: 16, fontSize: isPortrait ? 18 : 19, textIndent: "2em" }}>特此证明。</div>
 
+        <div
+          style={{
+            position: "absolute",
+            left: isPortrait ? 48 : 56,
+            bottom: isPortrait ? 32 : 24,
+            maxWidth: isPortrait ? 420 : 560,
+            fontSize: 13,
+            lineHeight: 1.7,
+            color: "#555",
+          }}
+        >
+          说明：本页为创新实践学分认定证明电子版，请学生自行打印后上交至辅导员处，统一盖章。
+        </div>
+
         {/* 底部签发信息 */}
         <div
           style={{
@@ -208,7 +223,6 @@ const CertificatePreview = forwardRef<
           }}
         >
           <div style={{ position: "relative" }}>
-            <Seal />
             <div style={{ position: "relative" }}>长春财经学院国际经济贸易学院</div>
             <div style={{ position: "relative" }}>{fmtDate(data.issuedAt)}</div>
           </div>
