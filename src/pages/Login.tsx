@@ -19,13 +19,12 @@ const IS_TEST_ENV =
   (import.meta.env.VITE_SUPABASE_URL ?? "").includes("eceqokilpppnwtfzgbvq") &&
   /(lovable\.app|lovableproject\.com|localhost)$/.test(window.location.hostname);
 // 测试账号一键登录入口开关：需要时改为 true 即可恢复显示
-const SHOW_TEST_LOGIN: boolean = false;
+const SHOW_TEST_LOGIN: boolean = true;
 const TEST_PASSWORD = "Test12345";
 const TEST_ACCOUNTS = [
   { account: "test_student", label: "测试学生" },
   { account: "test_teacher", label: "测试老师" },
   { account: "test_admin", label: "测试管理员" },
-  { account: "test_super", label: "测试超管" },
 ];
 
 const Login = () => {
@@ -116,7 +115,7 @@ const Login = () => {
           {SHOW_TEST_LOGIN && IS_TEST_ENV && (
             <div className="space-y-2 border-t pt-3">
               <p className="text-center text-xs text-muted-foreground">测试环境 · 一键登录（学校服务器上不显示）</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {TEST_ACCOUNTS.map((t) => (
                   <Button key={t.account} type="button" variant="outline" size="sm" disabled={submitting}
                     onClick={async () => {
