@@ -557,7 +557,11 @@ const ApplicationDetail = () => {
         `创新实践学分认定证明_${student.student_no}_${certData.certificateNo}_${tag}.pdf`,
         orientation,
       );
-      toast({ title: "证明已导出", description: `证书编号：${certData.certificateNo}` });
+      toast({
+        title: "证明已导出",
+        description: `证书编号：${certData.certificateNo}。请自行打印（或由辅导员统一打印），上交至辅导员处，统一到徐玲老师处盖章。`,
+        duration: 12000,
+      });
       setPreviewOpen(false);
     } catch (e: any) {
       toastErrorLegacy(e, "导出失败");
