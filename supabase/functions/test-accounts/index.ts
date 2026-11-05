@@ -14,7 +14,6 @@ const ACCOUNTS = [
   { account: "test_student", name: "测试学生", role: "student", student_no: "T2026001" },
   { account: "test_teacher", name: "测试老师", role: "teacher" },
   { account: "test_admin", name: "测试管理员", role: "admin" },
-  { account: "test_super", name: "测试超管", role: "super_admin" },
 ] as const;
 
 Deno.serve(async (req) => {
