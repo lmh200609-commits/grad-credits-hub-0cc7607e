@@ -175,10 +175,9 @@ const CertificatePreview = forwardRef<
             marginTop: isPortrait ? 40 : 28,
             fontSize: isPortrait ? 18 : 19,
             lineHeight: 2.2,
-            textIndent: "2em",
           }}
         >
-          经长春财经学院国际经济贸易学院创新实践学分认定工作组审核，认定授予创新实践学分等级
+          {"\u3000\u3000"}经长春财经学院国际经济贸易学院创新实践学分认定工作组审核，认定授予创新实践学分等级
           <span
             style={{
               fontWeight: 900,
@@ -197,19 +196,6 @@ const CertificatePreview = forwardRef<
         </div>
         <div style={{ marginTop: 16, fontSize: isPortrait ? 18 : 19, textIndent: "2em" }}>特此证明。</div>
 
-        <div
-          style={{
-            position: "absolute",
-            left: isPortrait ? 48 : 56,
-            bottom: isPortrait ? 32 : 24,
-            maxWidth: isPortrait ? 420 : 560,
-            fontSize: 13,
-            lineHeight: 1.7,
-            color: "#555",
-          }}
-        >
-          说明：本页为创新实践学分认定证明电子版，请学生自行打印后上交至辅导员处，统一盖章。
-        </div>
 
         {/* 底部签发信息 */}
         <div
